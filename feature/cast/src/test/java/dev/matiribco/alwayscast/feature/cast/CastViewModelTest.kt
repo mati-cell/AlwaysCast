@@ -221,6 +221,78 @@ class CastViewModelTest {
         }
 
     @Test
+    fun onCastClick_unknownVerdictRemainsUnknown_setsUnsupportedPhaseAndNeverLoads() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Unknown(null)
+                }
+            val fakeInspector =
+                object : MediaInspector {
+                    override suspend fun inspect(candidate: MediaCandidate): Verdict = Verdict.Unknown(null)
+                }
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource =
+                        throw AssertionError(RESOLVER_SHOULD_NOT_BE_CALLED)
+                }
+            val recordingController = RecordingCastController()
+
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = recordingController,
+                    inspector = fakeInspector,
+                )
+            viewModel.onUrlChange("https://ok.ru/video/7715958885030")
+            viewModel.onCastClick()
+
+            advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(Phase.UNSUPPORTED, state.phase)
+            assertEquals(0, recordingController.loadCallCount)
+        }
+
+    @Test
+    fun onCastClick_unsupportedNoMedia_setsUnsupportedPhaseWithWebpageNotice() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
+                }
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource =
+                        throw AssertionError(RESOLVER_SHOULD_NOT_BE_CALLED)
+                }
+            val recordingController = RecordingCastController()
+
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = recordingController,
+                )
+            viewModel.onUrlChange("https://ok.ru/video/7715958885030")
+            viewModel.onCastClick()
+
+            advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(Phase.UNSUPPORTED, state.phase)
+            assertTrue(state.message?.contains("página", ignoreCase = true) == true || state.message?.contains("medio", ignoreCase = true) == true)
+            assertEquals(0, recordingController.loadCallCount)
+        }
+
+    @Test
     fun onConnectClick_deviceAvailable_connectsAndSetsReadyPhase() =
         runTest(testDispatcher) {
             val fakeClassifier =
