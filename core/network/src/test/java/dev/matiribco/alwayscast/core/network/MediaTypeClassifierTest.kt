@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MediaTypeClassifierTest {
-
     @Test
     fun classify_mp4WithoutContentType_returnsSupportedMp4() {
         val url = "https://cdn.example/movie.mp4"
