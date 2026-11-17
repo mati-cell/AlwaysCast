@@ -6,14 +6,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProxyUrlTest {
-
     @Test
     fun format_validHostPortAndPath_returnsCompleteHttpUrl() {
-        val url = ProxyUrl.format(
-            host = LAN_HOST,
-            port = TEST_PORT,
-            path = TEST_PATH,
-        )
+        val url =
+            ProxyUrl.format(
+                host = LAN_HOST,
+                port = TEST_PORT,
+                path = TEST_PATH,
+            )
 
         assertEquals("http://192.168.1.50:8080/s/token/video.mp4", url)
     }
