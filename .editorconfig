@@ -9,7 +9,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{kt,kts}]
-ktlint_code_style = android_studio
+ktlint_code_style = ktlint_official
 max_line_length = 120
 
 [*.{yml,yaml,json}]
