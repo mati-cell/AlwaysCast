@@ -6,13 +6,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class HeaderInjectorTest {
-
     @Test
     fun headersFor_candidateWithRefererAndCookie_keepsBoth() {
-        val candidate = MediaCandidate(
-            url = "https://cdn.example/v.mp4",
-            headers = mapOf("Referer" to "https://site.example/page", "Cookie" to "session=abc"),
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://cdn.example/v.mp4",
+                headers = mapOf("Referer" to "https://site.example/page", "Cookie" to "session=abc"),
+            )
 
         val headers = HeaderInjector.headersFor(candidate)
 
@@ -31,10 +31,11 @@ class HeaderInjectorTest {
 
     @Test
     fun headersFor_candidateWithUserAgent_keepsTheGivenOne() {
-        val candidate = MediaCandidate(
-            url = "https://cdn.example/v.mp4",
-            headers = mapOf("User-Agent" to "CustomAgent/1.0"),
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://cdn.example/v.mp4",
+                headers = mapOf("User-Agent" to "CustomAgent/1.0"),
+            )
 
         val headers = HeaderInjector.headersFor(candidate)
 
@@ -43,15 +44,17 @@ class HeaderInjectorTest {
 
     @Test
     fun headersFor_candidateWithHopByHopHeaders_dropsThem() {
-        val candidate = MediaCandidate(
-            url = "https://cdn.example/v.mp4",
-            headers = mapOf(
-                "Connection" to "keep-alive",
-                "Host" to "cdn.example",
-                "Content-Length" to "10",
-                "Accept-Encoding" to "gzip",
-            ),
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://cdn.example/v.mp4",
+                headers =
+                    mapOf(
+                        "Connection" to "keep-alive",
+                        "Host" to "cdn.example",
+                        "Content-Length" to "10",
+                        "Accept-Encoding" to "gzip",
+                    ),
+            )
 
         val headers = HeaderInjector.headersFor(candidate)
 

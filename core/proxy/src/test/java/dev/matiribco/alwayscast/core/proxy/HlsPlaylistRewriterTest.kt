@@ -5,8 +5,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class HlsPlaylistRewriterTest {
-
-    private val playlist = """
+    private val playlist =
+        """
         #EXTM3U
         #EXT-X-VERSION:3
         #EXT-X-KEY:METHOD=AES-128,URI="enc.key",IV=0x1
@@ -15,12 +15,16 @@ class HlsPlaylistRewriterTest {
         #EXTINF:4,
         seg1.ts
         #EXT-X-ENDLIST
-    """.trimIndent()
+        """.trimIndent()
 
     @Test
     fun rewrite_keyAndSegmentUris_mapsEachResolvedUri() {
         val mappedUris = mutableListOf<String>()
-        val rewriter = HlsPlaylistRewriter { uri -> mappedUris += uri; uri }
+        val rewriter =
+            HlsPlaylistRewriter { uri ->
+                mappedUris += uri
+                uri
+            }
 
         rewriter.rewrite(playlist, "http://cdn.example/dir/index.m3u8")
 
@@ -38,7 +42,11 @@ class HlsPlaylistRewriterTest {
     fun rewrite_mapTag_rewritesInitializationSectionUri() {
         val manifest = "#EXTM3U\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:4,\nseg0.m4s\n"
         val mappedUris = mutableListOf<String>()
-        val rewriter = HlsPlaylistRewriter { uri -> mappedUris += uri; uri }
+        val rewriter =
+            HlsPlaylistRewriter { uri ->
+                mappedUris += uri
+                uri
+            }
 
         rewriter.rewrite(manifest, "http://cdn.example/dir/index.m3u8")
 
@@ -48,7 +56,11 @@ class HlsPlaylistRewriterTest {
     @Test
     fun rewrite_absoluteSegmentUri_keepsAbsoluteUri() {
         val mappedUris = mutableListOf<String>()
-        val rewriter = HlsPlaylistRewriter { uri -> mappedUris += uri; uri }
+        val rewriter =
+            HlsPlaylistRewriter { uri ->
+                mappedUris += uri
+                uri
+            }
 
         rewriter.rewrite("#EXTM3U\n#EXTINF:4,\nhttps://other.cdn/seg1.ts\n", "http://cdn.example/dir/index.m3u8")
 

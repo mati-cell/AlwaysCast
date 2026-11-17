@@ -6,7 +6,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ProxyPathTest {
-
     @Test
     fun decode_encodedSignedUrl_returnsTheOriginalUrl() {
         val upstreamUrl = "https://cdn.example/v.mp4?token=a+b/c=d&exp=17"
