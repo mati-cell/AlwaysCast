@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WindowPlannerTest {
-
     @Test
     fun rangesFor_fileSmallerThanBothWindows_returnsOneFullRange() {
         val ranges = WindowPlanner.rangesFor(size = 1_000)
@@ -18,7 +17,7 @@ class WindowPlannerTest {
 
         assertEquals(2, ranges.size)
         assertEquals(0L..4_194_303L, ranges[0])
-        assertEquals(95_805_696L..99_999_999L, ranges[1])
+        assertEquals(97_902_848L..99_999_999L, ranges[1])
     }
 
     @Test

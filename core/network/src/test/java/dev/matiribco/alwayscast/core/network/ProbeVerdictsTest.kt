@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ProbeVerdictsTest {
-
     @Test
     fun fromCodecs_hevcVideo_returnsUnsupportedHevc() {
         val verdict = ProbeVerdicts.fromCodecs(videoMime = "video/hevc", containerContentType = "video/mp4")
@@ -51,7 +50,11 @@ class ProbeVerdictsTest {
 
     @Test
     fun fromCodecs_vp9VideoInMatroska_returnsSupportedMatroska() {
-        val verdict = ProbeVerdicts.fromCodecs(videoMime = "video/x-vnd.on2.vp9", containerContentType = "video/x-matroska")
+        val verdict =
+            ProbeVerdicts.fromCodecs(
+                videoMime = "video/x-vnd.on2.vp9",
+                containerContentType = "video/x-matroska",
+            )
 
         assertEquals(Verdict.Supported("video/x-matroska"), verdict)
     }
