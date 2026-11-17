@@ -37,6 +37,27 @@ demuestra la idea. Las fases 3 (navegador con detección), 4 (compartir/archivos
 - UI en español; nombres de código, commits y README en inglés.
 - Licencia Apache-2.0. Nada de datos de usuario fuera del dispositivo.
 
+## Convenciones de código y commits
+
+Vinculantes para todo el plan. Adaptadas de `.github/skills/da1-code-quality-reviewer` y
+`.github/skills/da1-coupling-cohesion-reviewer`.
+
+- **TDD estricto.** Ningún código de producción sin un test que antes falló.
+- **AAA.** Cada test se lee en tres bloques: Arrange, Act, Assert.
+- **Un concepto por test.** Una aserción, o varias que prueban lo mismo.
+- **Nombre de test:** `metodo_escenario_resultadoEsperado`
+  (`classify_mp4WithoutContentType_returnsSupported`). Sin backticks.
+- **FIRST.** Rápidos, independientes, repetibles, autovalidables, escritos primero.
+- **Sin magic strings ni magic numbers.** Constantes nombradas: `HEAD_BYTES`,
+  `TAIL_BYTES`, `SPOOL_MAX_BYTES`, `DEFAULT_MEDIA_RECEIVER_ID`, `PLAYLIST_MAX_BYTES`.
+- **Cohesión y acoplamiento.** Una clase, una razón de cambio; se depende de interfaces,
+  no de implementaciones; las `feature` no se conocen entre sí; sin trenes de llamadas
+  (`a.b().c()`); interfaces chicas por consumidor.
+- **Commits:** `red:`, `green:`, `refactor:`, `fix:`, `feat:`, `docs:`, en inglés,
+  minúscula, sin punto final. Cada task cierra con al menos un `red` y un `green`.
+- **Revisión final:** aplicar las dos skills de `.github/skills/` como checklist antes
+  del PR de cierre.
+
 ## Review Focus
 
 Las cinco formas en que esto va a fallar en la vida real, y el test que las cubre:
@@ -125,7 +146,9 @@ Run: `.\gradlew.bat assembleDebug testDebugUnitTest` → Expected: `BUILD SUCCES
 
 ```bash
 git add -A
-git commit -m "chore: android multi-module skeleton with ci"
+git commit -m "red: add build info version test"
+git add -A
+git commit -m "green: create multi-module android skeleton with ci"
 git push
 ```
 
@@ -194,7 +217,9 @@ Run: `.\gradlew.bat :core:network:testDebugUnitTest` → Expected: PASS (6 tests
 
 ```bash
 git add -A
-git commit -m "feat(core): classify media candidates by container and codec hints"
+git commit -m "red: specify media type classification table"
+git add -A
+git commit -m "green: classify candidates by container and codec hints"
 ```
 
 ---
@@ -266,7 +291,9 @@ reemplaza URIs de `#EXT-X-KEY` y `#EXT-X-MAP` además de las líneas de segmento
 
 ```bash
 git add -A
-git commit -m "feat(proxy): token paths, header injection and hls playlist rewriting"
+git commit -m "red: specify proxy path and hls rewriting behaviour"
+git add -A
+git commit -m "green: add token paths header injection and playlist rewriting"
 ```
 
 ---
@@ -317,7 +344,9 @@ con `Content-Length` recalculado. Streaming con `respondOutputStream` para el re
 
 ```bash
 git add -A
-git commit -m "feat(proxy): ktor cast proxy with range passthrough and hls support"
+git commit -m "red: specify proxy range and spool behaviour"
+git add -A
+git commit -m "green: implement ktor proxy with range passthrough and spool"
 ```
 
 ---
@@ -370,7 +399,9 @@ git commit -m "feat(proxy): ktor cast proxy with range passthrough and hls suppo
 
 ```bash
 git add -A
-git commit -m "feat(network): head and tail probe with media extractor"
+git commit -m "red: specify probe window planning"
+git add -A
+git commit -m "green: probe head and tail with media extractor"
 ```
 
 ---
@@ -415,7 +446,9 @@ sin tocar la interfaz. Registrar la decisión en `docs/adr/0002-cast-receiver-y-
 
 ```bash
 git add -A
-git commit -m "feat(cast): cast controller over play services cast"
+git commit -m "red: specify cast state mapping"
+git add -A
+git commit -m "green: implement cast controller over play services"
 ```
 
 ---
@@ -465,7 +498,9 @@ red) → `cast.load(...)` → `Phase.CASTING`.
 
 ```bash
 git add -A
-git commit -m "feat(cast): view model for paste and cast flow"
+git commit -m "red: specify cast view model transitions"
+git add -A
+git commit -m "green: implement proxy resolver and cast view model"
 ```
 
 ---
@@ -510,7 +545,9 @@ local), servicio con `foregroundServiceType="mediaPlayback"`, `MainActivity` com
 
 ```bash
 git add -A
-git commit -m "feat(app): cast screen, foreground service and device validation"
+git commit -m "red: add proxy url sanity test"
+git add -A
+git commit -m "green: add cast screen foreground service and app wiring"
 ```
 
 ---
@@ -542,10 +579,15 @@ instalación, `tools/testmedia`, y la nota de las dos generaciones de Google Hom
 0002: por qué el DMR y qué API; 0003: por qué el proxy vive en el teléfono; 0004: por qué
 no se transcodifica (medición de la fase 0 incluida).
 
-- [ ] **Step 4: Verificar y commitear**
+- [ ] **Step 4: Auditoría de calidad y cierre**
 
+Aplicar como checklist las dos skills de `.github/skills/` sobre el código del MVP:
+cohesión de clases, acoplamiento entre módulos, interfaces por consumidor, ausencia de
+magic numbers, y disciplina TDD en el historial de commits.
 Run: `.\gradlew.bat detekt ktlintCheck testDebugUnitTest assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
+
+- [ ] **Step 5: Commit y push**
 
 ```bash
 git add -A
