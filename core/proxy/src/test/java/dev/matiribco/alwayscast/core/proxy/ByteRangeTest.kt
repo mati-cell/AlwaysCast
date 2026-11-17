@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ByteRangeTest {
-
     @Test
     fun parse_openEndedRange_endsAtLastByte() {
         val range = ByteRange.parse("bytes=4-", size = 10)

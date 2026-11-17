@@ -9,7 +9,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class FileSpoolStoreTest {
-
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
@@ -53,7 +52,10 @@ class FileSpoolStoreTest {
         assertFalse(file.exists())
     }
 
-    private fun fileWithAge(name: String, ageMillis: Long): File =
+    private fun fileWithAge(
+        name: String,
+        ageMillis: Long,
+    ): File =
         storeWithCap(1_000).file(name).apply {
             writeBytes(ByteArray(SIX_BYTES))
             setLastModified(ageMillis)

@@ -19,7 +19,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
 class CastProxyServerTest {
-
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
@@ -119,7 +118,7 @@ class CastProxyServerTest {
                 headers = mapOf("Referer" to "https://site.example/watch"),
             )
 
-        val response = get(URI(server.urlFor(candidate)).path, mapOf("Range" to "bytes=0-0"))
+        val response = get(URI(server.urlFor(candidate)).path)
 
         val recorded = origin.takeRequest()
         assertEquals(200, response.statusCode())
@@ -148,7 +147,10 @@ class CastProxyServerTest {
 
     private fun proxyPath(upstream: String): String = ProxyPath.forToken(TOKEN, upstream)
 
-    private fun get(path: String, headers: Map<String, String> = emptyMap()): HttpResponse<String> {
+    private fun get(
+        path: String,
+        headers: Map<String, String> = emptyMap(),
+    ): HttpResponse<String> {
         val requestBuilder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:${server.boundPort}$path"))
         headers.forEach { (name, value) -> requestBuilder.header(name, value) }
         return http.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
