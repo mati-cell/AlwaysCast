@@ -140,4 +140,22 @@ class MediaTypeClassifierTest {
 
         assertEquals(Verdict.Supported("video/mp4"), verdict)
     }
+
+    @Test
+    fun classify_htmlContentType_returnsUnsupportedNoMedia() {
+        val contentType = "text/html; charset=UTF-8"
+
+        val verdict = MediaTypeClassifier.classify("https://ok.ru/video/7715958885030", contentType)
+
+        assertEquals(Verdict.Unsupported(UnsupportedReason.NO_MEDIA), verdict)
+    }
+
+    @Test
+    fun classify_htmlExtension_returnsUnsupportedNoMedia() {
+        val url = "https://example.com/watch.html"
+
+        val verdict = MediaTypeClassifier.classify(url, null)
+
+        assertEquals(Verdict.Unsupported(UnsupportedReason.NO_MEDIA), verdict)
+    }
 }

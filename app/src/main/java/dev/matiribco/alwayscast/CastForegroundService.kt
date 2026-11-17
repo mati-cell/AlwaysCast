@@ -73,20 +73,22 @@ class CastForegroundService : Service() {
         if (proxyServer != null) return
 
         serviceScope.launch {
-            val spoolDir = cacheDir.resolve(SPOOL_DIR_NAME).apply { mkdirs() }
-            val spool = FileSpoolStore(spoolDir)
-            val client = OkHttpClient()
-            val host = LanAddressResolver.findLanIp()
+            runCatching {
+                val spoolDir = cacheDir.resolve(SPOOL_DIR_NAME).apply { mkdirs() }
+                val spool = FileSpoolStore(spoolDir)
+                val client = OkHttpClient()
+                val host = LanAddressResolver.findLanIp()
 
-            val server =
-                CastProxyServer(
-                    client = client,
-                    spool = spool,
-                    host = host,
-                )
-            server.start()
-            proxyServer = server
-            activeProxy = server
+                val server =
+                    CastProxyServer(
+                        client = client,
+                        spool = spool,
+                        host = host,
+                    )
+                server.start()
+                proxyServer = server
+                activeProxy = server
+            }
         }
     }
 
