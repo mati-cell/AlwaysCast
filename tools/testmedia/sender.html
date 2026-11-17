@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AlwaysCast · fase 0</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #121212; color: #e8e8e8; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #9a9a9a; }
+  #status { padding: 10px 12px; border-radius: 8px; background: #1f1f1f; margin-bottom: 6px; }
+  #status.ok { background: #14361f; }
+  #status.err { background: #3a1616; }
+  #diag { color: #7d7d7d; font-size: 13px; margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; max-width: 980px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2a2a2a; vertical-align: middle; }
+  th { font-weight: 600; color: #9a9a9a; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  code { color: #8fd3ff; font-size: 13px; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #232323; color: #e8e8e8; cursor: pointer; }
+  button:hover { background: #2e2e2e; }
+  button.primary { background: #2b6ef2; border-color: #2b6ef2; color: #fff; }
+  button.on { background: #1f6b3a; border-color: #1f6b3a; }
+  button.off { background: #6b1f1f; border-color: #6b1f1f; }
+  #log { background: #0b0b0b; border: 1px solid #222; border-radius: 8px; padding: 10px; height: 190px; overflow: auto; font: 12px/1.45 ui-monospace, monospace; white-space: pre-wrap; margin-top: 20px; }
+  .row-actions { display: flex; gap: 6px; }
+  textarea { width: 100%; max-width: 980px; height: 120px; background: #0b0b0b; color: #8fd3ff; border: 1px solid #222; border-radius: 8px; padding: 10px; font: 12px ui-monospace, monospace; }
+  .bar { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .bar input { flex: 1 1 420px; padding: 6px 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #e8e8e8; font: inherit; }
+  #now { color: #9a9a9a; }
+</style>
+</head>
+<body>
+
+<h1>AlwaysCast · fase 0</h1>
+<p class="sub">Matriz de compatibilidad del Chromecast gen1 contra el Default Media Receiver (API legacy de Cast).</p>
+
+<div id="status">Esperando la API de Cast…</div>
+<div id="diag"></div>
+
+<table>
+  <thead><tr><th>#</th><th>Qué prueba</th><th>URL</th><th></th><th>Resultado</th></tr></thead>
+  <tbody id="tests"></tbody>
+</table>
+
+<div class="bar">
+  <input id="customUrl" placeholder="URL libre (mp4, m3u8, etc.)">
+  <button id="customType">video/mp4</button>
+  <button id="customSend">Castear URL</button>
+</div>
+
+<div class="bar">
+  <button id="pause">Play / Pause</button>
+  <button id="plus30">+30 s</button>
+  <button id="stop">Stop</button>
+  <span id="now"></span>
+</div>
+
+<div id="log"></div>
+
+<p class="sub" style="margin-top:16px">Informe</p>
+<textarea id="report" readonly></textarea>
+<p><button id="copy">Copiar informe</button> <button id="reset">Reiniciar marcas</button></p>
+
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+<script>
+const BASE = '__MEDIA_BASE__';
+
+const TESTS = [
+  { id: '01', label: 'MP4 H.264 + AAC, con faststart', path: '01-h264-aac-faststart.mp4', type: 'video/mp4' },
+  { id: '02', label: 'MP4 H.264 + AAC, sin faststart (moov al final)', path: '02-h264-aac-nofaststart.mp4', type: 'video/mp4' },
+  { id: '03', label: 'MP4 H.264 + AC3', path: '03-h264-ac3.mp4', type: 'video/mp4' },
+  { id: '04', label: 'WebM VP8 + Vorbis', path: '04-vp8-vorbis.webm', type: 'video/webm' },
+  { id: '05', label: 'HLS sin cifrar', path: '05-hls-plain/index.m3u8', type: 'application/x-mpegurl' },
+  { id: '06', label: 'HLS con AES-128', path: '06-hls-aes/index.m3u8', type: 'application/x-mpegurl' },
+  { id: '07', label: 'MKV H.264 + AAC (se espera que falle)', path: '07-h264-aac.mkv', type: 'video/x-matroska' },
+  { id: '08', label: 'MP4 1080p a 12 Mbps (ancho de banda)', path: '08-1080p-12mbps.mp4', type: 'video/mp4' },
+  { id: '09', label: 'MP4 HEVC/H.265 (se espera que NO)', path: '09-hevc.mp4', type: 'video/mp4' },
+];
+
+const results = {};
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+const testsEl = document.getElementById('tests');
+
+let castSession = null;
+let currentMedia = null;
+let currentTestId = null;
+
+const log = (m) => {
+  logEl.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+};
+const setStatus = (t, cls = '') => { statusEl.textContent = t; statusEl.className = cls; };
+const fmt = (s) => (s == null || Number.isNaN(s) ? '—' : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`);
+
+function render() {
+  testsEl.innerHTML = '';
+  for (const t of TESTS) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t.id}</td><td></td><td><code>${t.path}</code></td><td></td><td class="row-actions"></td>`;
+    const name = document.createElement('span');
+    name.textContent = t.label;
+    tr.children[1].appendChild(name);
+
+    const castBtn = document.createElement('button');
+    castBtn.textContent = 'Castear';
+    castBtn.className = 'primary';
+    castBtn.onclick = () => send(`${BASE}/${t.path}`, t.type, t.id);
+    tr.children[3].appendChild(castBtn);
+
+    const r = results[t.id] || {};
+    for (const [key, label, cls] of [['ok', 'Se vio', 'on'], ['bad', 'No se vio', 'off'], ['meh', 'Con fallas', '']]) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (r.verdict === key) b.className = cls;
+      b.onclick = () => { results[t.id] = { ...results[t.id], verdict: key }; render(); updateReport(); };
+      tr.children[4].appendChild(b);
+    }
+    testsEl.appendChild(tr);
+  }
+}
+
+function updateReport() {
+  document.getElementById('report').value = TESTS.map((t) => {
+    const r = results[t.id] || {};
+    return `${t.id} ${t.label}: ${r.verdict || 'sin probar'}${r.note ? ` — ${r.note}` : ''}`;
+  }).join('\n');
+}
+
+function note(id, text, verdict) {
+  if (!id) return;
+  results[id] = { ...results[id], note: text, ...(verdict ? { verdict } : {}) };
+  updateReport();
+}
+
+function onSession(s) {
+  castSession = s;
+  const name = s.receiver?.friendlyName || 'Chromecast';
+  const model = s.receiver?.modelName || 'modelo ?';
+  setStatus(`Conectado a ${name} (${model})`, 'ok');
+  log(`sesión: ${name} / ${model}`);
+  s.addUpdateListener((alive) => {
+    log(`sesión alive=${alive} status=${s.status}`);
+    if (!alive) { castSession = null; setStatus('Sesión cerrada.'); }
+  });
+}
+
+function connect() {
+  return new Promise((resolve, reject) => {
+    if (castSession) return resolve(castSession);
+    chrome.cast.requestSession((s) => { onSession(s); resolve(s); }, (e) => reject(new Error(e.description || e.code || 'requestSession falló')));
+  });
+}
+
+function send(url, contentType, testId) {
+  currentTestId = testId;
+  log(`casteando ${testId || '(manual)'} → ${url}`);
+  connect()
+    .then((s) => {
+      const info = new chrome.cast.media.MediaInfo(url, contentType);
+      info.streamType = chrome.cast.media.StreamType.BUFFERED;
+      const request = new chrome.cast.media.LoadRequest(info);
+      request.autoplay = true;
+      s.loadMedia(
+        request,
+        (m) => {
+          currentMedia = m;
+          log('loadMedia aceptado');
+          note(testId, 'loadMedia aceptado');
+          m.addUpdateListener((alive) => {
+            if (!alive) { log('media cerrado'); return; }
+            const st = m.playerState;
+            document.getElementById('now').textContent = `${st} ${fmt(m.currentTime)} / ${fmt(m.media?.duration)}`;
+            log(`estado=${st} t=${fmt(m.currentTime)} dur=${fmt(m.media?.duration)}`);
+            if (st === chrome.cast.media.PlayerState.PLAYING) note(testId, 'arrancó');
+            if (st === chrome.cast.media.PlayerState.PAUSED) reasonPaused(testId, m);
+          });
+        },
+        (e) => {
+          const msg = e?.description || e?.code || 'error desconocido';
+          log(`loadMedia FALLÓ: ${msg}`);
+          setStatus(`Error al castear: ${msg}`, 'err');
+          note(testId, `loadMedia falló: ${msg}`, 'bad');
+        }
+      );
+    })
+    .catch((e) => {
+      const msg = e?.description || e?.message || String(e);
+      log(`conexión FALLÓ: ${msg}`);
+      setStatus(`Error de conexión: ${msg}`, 'err');
+      note(testId, `conexión falló: ${msg}`);
+    });
+}
+
+function reasonPaused(testId, m) {
+  const why = m.idleReason;
+  if (why && why !== 'CANCELLED') {
+    log(`idleReason=${why}`);
+    note(testId, `pausado: ${why}`, why === 'FINISHED' ? undefined : 'bad');
+  }
+}
+
+window.__onGCastApiAvailable = (available) => {
+  if (!available) {
+    setStatus('El navegador no expone chrome.cast.', 'err');
+    return;
+  }
+  const cfg = new chrome.cast.ApiConfig(
+    new chrome.cast.SessionRequest('CC1AD845'), // Default Media Receiver
+    onSession,
+    () => log('receiver disponible'),
+    chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+  );
+  chrome.cast.initialize(
+    cfg,
+    () => {
+      setStatus('Listo. Probá el 01.');
+      log(`Cast API inicializada (versión ${chrome.cast.version || '?'})`);
+    },
+    (e) => setStatus(`init falló: ${e.description || e.code}`, 'err')
+  );
+};
+
+document.getElementById('customType').onclick = (e) => {
+  const cycle = ['video/mp4', 'application/x-mpegurl', 'video/webm'];
+  e.target.textContent = cycle[(cycle.indexOf(e.target.textContent) + 1) % cycle.length];
+};
+document.getElementById('customSend').onclick = () => {
+  const url = document.getElementById('customUrl').value.trim();
+  if (url) send(url, document.getElementById('customType').textContent, null);
+};
+document.getElementById('pause').onclick = () => {
+  if (!currentMedia) return;
+  const playing = currentMedia.playerState === chrome.cast.media.PlayerState.PLAYING;
+  playing ? currentMedia.pause(null, null) : currentMedia.play(null, null);
+};
+document.getElementById('plus30').onclick = () => {
+  if (!currentMedia) return;
+  const target = (currentMedia.currentTime || 0) + 30;
+  currentMedia.seek(target, () => log(`seek → ${target}s OK`), (e) => log(`seek falló: ${e?.description || e?.code}`));
+};
+document.getElementById('stop').onclick = () => currentMedia?.stop(null, null);
+document.getElementById('copy').onclick = () => {
+  navigator.clipboard?.writeText(`${document.getElementById('report').value}\n\n--- log ---\n${logEl.textContent}`);
+  log('informe copiado (incluye el log)');
+};
+document.getElementById('reset').onclick = () => {
+  for (const k of Object.keys(results)) delete results[k];
+  render(); updateReport();
+};
+
+render();
+updateReport();
+
+document.getElementById('diag').textContent =
+  `chrome.cast: ${typeof chrome !== 'undefined' && !!chrome.cast ? 'sí' : 'no'} · ` +
+  `cast.framework.messages: ${globalThis.cast?.framework?.messages ? 'sí' : 'no (usamos la API legacy)'} · ` +
+  `navegador: ${/Edg\//.test(navigator.userAgent) ? 'Edge (no sirve)' : 'Chromium'}`;
+
+setTimeout(() => {
+  if (statusEl.textContent.includes('Esperando')) {
+    setStatus('La API de Cast no se inicializó. ¿Bloqueador de anuncios o extensión?', 'err');
+  }
+}, 5000);
+</script>
+</body>
+</html>
