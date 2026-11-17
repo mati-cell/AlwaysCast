@@ -1,5 +1,8 @@
 package dev.matiribco.alwayscast
 
+import android.Manifest.permission.POST_NOTIFICATIONS
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,7 +23,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        CastForegroundService.start(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val isGranted = checkSelfPermission(POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            if (!isGranted) {
+                requestPermissions(
+                    arrayOf(POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE,
+                )
+            }
+        }
 
         val httpClient = OkHttpClient()
         val spoolDir = cacheDir.resolve(SPOOL_DIR_NAME).apply { mkdirs() }
@@ -63,5 +74,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val SPOOL_DIR_NAME = "cast_spool"
+        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
     }
 }

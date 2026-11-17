@@ -30,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.mediarouter.app.MediaRouteButton
+import com.google.android.gms.cast.framework.CastButtonFactory
 
 @Composable
 fun CastRoute(
@@ -67,11 +70,7 @@ fun CastScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = "AlwaysCast",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            CastHeader()
 
             DeviceStatusCard(deviceName = state.deviceName)
 
@@ -87,25 +86,11 @@ fun CastScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Button(
-                    onClick = onCastClick,
-                    enabled = textInput.isNotBlank() && state.phase != Phase.PROBING,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Castear")
-                }
-
-                OutlinedButton(
-                    onClick = onConnectClick,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Conectar")
-                }
-            }
+            CastActionButtons(
+                isCastEnabled = textInput.isNotBlank() && state.phase != Phase.PROBING,
+                onCastClick = onCastClick,
+                onConnectClick = onConnectClick,
+            )
 
             PhaseIndicator(state = state)
 
@@ -120,12 +105,82 @@ fun CastScreen(
 }
 
 @Composable
+private fun CastHeader(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "AlwaysCast",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        CastMediaRouteButton()
+    }
+}
+
+@Composable
+private fun CastActionButtons(
+    isCastEnabled: Boolean,
+    onCastClick: () -> Unit,
+    onConnectClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Button(
+            onClick = onCastClick,
+            enabled = isCastEnabled,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Castear")
+        }
+
+        OutlinedButton(
+            onClick = onConnectClick,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Conectar")
+        }
+    }
+}
+
+@Composable
+fun CastMediaRouteButton(modifier: Modifier = Modifier) {
+    AndroidView(
+        factory = { context ->
+            MediaRouteButton(context).apply {
+                CastButtonFactory.setUpMediaRouteButton(context, this)
+            }
+        },
+        modifier = modifier.size(40.dp),
+    )
+}
+
+@Composable
 private fun DeviceStatusCard(
     deviceName: String?,
     modifier: Modifier = Modifier,
 ) {
+    val isConnected = deviceName != null
+    val backgroundColor =
+        if (isConnected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val textColor =
+        if (isConnected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = backgroundColor,
         shape = MaterialTheme.shapes.medium,
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -134,9 +189,14 @@ private fun DeviceStatusCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = if (deviceName != null) "Dispositivo: $deviceName" else "Sin Chromecast conectado",
+                text =
+                    if (isConnected) {
+                        "Dispositivo: $deviceName"
+                    } else {
+                        "Sin conectar (toca el icono de Cast arriba para elegir tu Chromecast)"
+                    },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = textColor,
             )
         }
     }

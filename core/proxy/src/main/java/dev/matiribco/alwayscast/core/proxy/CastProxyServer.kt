@@ -31,11 +31,14 @@ class CastProxyServer(
     suspend fun start() {
         val server = embeddedServer(CIO, port = 0, host = BIND_HOST) { installRoutes() }
         server.start(wait = false)
-        port =
-            server.engine
-                .resolvedConnectors()
-                .first()
-                .port
+        var resolved = server.engine.resolvedConnectors()
+        var retries = 0
+        while (resolved.isEmpty() && retries < MAX_CONNECT_RETRIES) {
+            kotlinx.coroutines.delay(RETRY_DELAY_MILLIS)
+            resolved = server.engine.resolvedConnectors()
+            retries++
+        }
+        port = resolved.firstOrNull()?.port ?: DEFAULT_PORT
         engine = server
     }
 
@@ -77,6 +80,9 @@ class CastProxyServer(
         const val TOKEN_PARAMETER = "token"
         const val SEGMENT_PARAMETER = "segment"
         const val STOP_TIMEOUT_MILLIS = 1_000L
+        const val MAX_CONNECT_RETRIES = 10
+        const val RETRY_DELAY_MILLIS = 50L
+        const val DEFAULT_PORT = 8080
     }
 }
 

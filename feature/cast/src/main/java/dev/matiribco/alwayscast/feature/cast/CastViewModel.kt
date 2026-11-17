@@ -53,9 +53,8 @@ class CastViewModel(
                 is Verdict.Supported -> {
                     val connectResult = controller.connect()
                     if (connectResult.isFailure) {
-                        _state.value = CastUiState.error(
-                            connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE,
-                        )
+                        val message = connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE
+                        _state.value = CastUiState.error(message)
                         return@launch
                     }
 

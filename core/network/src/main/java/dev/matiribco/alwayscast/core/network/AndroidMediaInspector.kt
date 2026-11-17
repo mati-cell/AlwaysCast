@@ -1,3 +1,5 @@
+@file:Suppress("TooGenericExceptionCaught")
+
 package dev.matiribco.alwayscast.core.network
 
 import android.media.MediaExtractor
@@ -10,7 +12,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import java.io.IOException
 
 class AndroidMediaInspector(
     private val client: OkHttpClient,
@@ -29,7 +30,9 @@ class AndroidMediaInspector(
                         Verdict.Unknown(candidate.contentType)
                     }
                 }
-            } catch (@Suppress("SwallowedException") exception: Exception) {
+            } catch (
+                @Suppress("SwallowedException") exception: Exception,
+            ) {
                 Verdict.Unknown(candidate.contentType)
             }
         }
@@ -39,15 +42,19 @@ class AndroidMediaInspector(
         response: Response,
     ): Verdict {
         val containerContentType = response.header(CONTENT_TYPE) ?: candidate.contentType
-        if (containerContentType?.contains("html", ignoreCase = true) == true) {
+        if (containerContentType?.contains(HTML_KEYWORD, ignoreCase = true) == true) {
             return Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
         }
         val size = response.header(CONTENT_LENGTH)?.toLongOrNull() ?: UNKNOWN_SIZE
         val windows = WindowPlanner.rangesFor(size)
         val windowBytes = windows.mapNotNull { range -> fetch(candidate, range) }
-        val head = windowBytes.firstOrNull() ?: return Verdict.Unknown(containerContentType)
+        val head = windowBytes.firstOrNull()
 
-        return extractVerdict(candidate, ProbePayload(containerContentType, size, windows, windowBytes, head))
+        return if (head != null) {
+            extractVerdict(candidate, ProbePayload(containerContentType, size, windows, windowBytes, head))
+        } else {
+            Verdict.Unknown(containerContentType)
+        }
     }
 
     private fun extractVerdict(
@@ -68,11 +75,15 @@ class AndroidMediaInspector(
         } finally {
             try {
                 extractor.release()
-            } catch (@Suppress("SwallowedException") ignored: Exception) {
+            } catch (
+                @Suppress("SwallowedException") ignored: Exception,
+            ) {
             }
             try {
                 dataSource.close()
-            } catch (@Suppress("SwallowedException") ignored: Exception) {
+            } catch (
+                @Suppress("SwallowedException") ignored: Exception,
+            ) {
             }
         }
     }
@@ -110,6 +121,7 @@ class AndroidMediaInspector(
         const val CONTENT_TYPE = "Content-Type"
         const val CONTENT_LENGTH = "Content-Length"
         const val RANGE = "Range"
+        const val HTML_KEYWORD = "html"
     }
 }
 

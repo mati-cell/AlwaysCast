@@ -288,7 +288,10 @@ class CastViewModelTest {
 
             val state = viewModel.state.value
             assertEquals(Phase.UNSUPPORTED, state.phase)
-            assertTrue(state.message?.contains("página", ignoreCase = true) == true || state.message?.contains("medio", ignoreCase = true) == true)
+            val hasExpectedNotice =
+                state.message?.contains("página", ignoreCase = true) == true ||
+                    state.message?.contains("video", ignoreCase = true) == true
+            assertTrue(hasExpectedNotice)
             assertEquals(0, recordingController.loadCallCount)
         }
 
