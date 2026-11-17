@@ -47,16 +47,21 @@ class CastViewModel(
                     val message = formatUnsupportedMessage(verdict.reason)
                     _state.value = CastUiState.unsupported(currentUrl, message)
                 }
-                is Verdict.Supported, is Verdict.Unknown -> {
-                    _state.value = CastUiState.ready(currentUrl, null)
-
+                is Verdict.Unknown -> {
+                    _state.value = CastUiState.unsupported(currentUrl, UNKNOWN_MEDIA_MESSAGE)
+                }
+                is Verdict.Supported -> {
                     val connectResult = controller.connect()
                     if (connectResult.isFailure) {
-                        _state.value = CastUiState.error(NO_DEVICE_FOUND_MESSAGE)
+                        _state.value = CastUiState.error(
+                            connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE,
+                        )
                         return@launch
                     }
 
                     val deviceName = connectResult.getOrNull() ?: DEFAULT_DEVICE_NAME
+                    _state.value = CastUiState.ready(currentUrl, deviceName)
+
                     val resolved = resolver.resolve(candidate)
                     val loadResult = controller.load(resolved, null)
 
@@ -76,7 +81,10 @@ class CastViewModel(
         viewModelScope.launch {
             val connectResult = controller.connect()
             if (connectResult.isFailure) {
-                _state.value = CastUiState.error(NO_DEVICE_FOUND_MESSAGE)
+                _state.value =
+                    _state.value.copy(
+                        message = connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE,
+                    )
                 return@launch
             }
 
@@ -116,6 +124,9 @@ class CastViewModel(
         const val AV1_UNSUPPORTED_MESSAGE = "Códec AV1 no soportado por Chromecast de 1ª generación"
         const val DRM_UNSUPPORTED_MESSAGE = "Contenido con DRM no soportado"
         const val MSE_BLOB_UNSUPPORTED_MESSAGE = "Streams blob/mediasource no soportados"
-        const val NO_MEDIA_UNSUPPORTED_MESSAGE = "No se detectó ningún medio reproducible"
+        const val NO_MEDIA_UNSUPPORTED_MESSAGE =
+            "No se detectó un video directo (la URL es una página web HTML o un enlace no compatible)"
+        const val UNKNOWN_MEDIA_MESSAGE =
+            "No se detectó un archivo de video compatible en este enlace"
     }
 }

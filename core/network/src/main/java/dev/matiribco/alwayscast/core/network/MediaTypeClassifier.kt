@@ -29,6 +29,24 @@ object MediaTypeClassifier : MediaClassifier {
     private const val EXTENSION_SEPARATOR = '.'
     private const val VIDEO_PREFIX = "video/"
     private const val AUDIO_PREFIX = "audio/"
+    private const val HTML = "html"
+    private const val TEXT_PLAIN = "text/plain"
+    private const val EXT_HTML = "html"
+    private const val EXT_HTM = "htm"
+    private const val EXT_PHP = "php"
+    private const val EXT_ASP = "asp"
+    private const val EXT_ASPX = "aspx"
+    private const val EXT_JSP = "jsp"
+
+    private val webpageExtensions =
+        setOf(
+            EXT_HTML,
+            EXT_HTM,
+            EXT_PHP,
+            EXT_ASP,
+            EXT_ASPX,
+            EXT_JSP,
+        )
 
     private val contentTypesByExtension =
         mapOf(
@@ -55,8 +73,20 @@ object MediaTypeClassifier : MediaClassifier {
                 Verdict.Unsupported(UnsupportedReason.AV1)
             hints.contains(WIDEVINE) || hints.contains(DRM_TODAY) || hints.contains(PLAYREADY) ->
                 Verdict.Unsupported(UnsupportedReason.DRM)
+            isHtmlOrWebpage(url, contentType) ->
+                Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
             else -> supportedOrUnknown(url, contentType)
         }
+    }
+
+    private fun isHtmlOrWebpage(
+        url: String,
+        contentType: String?,
+    ): Boolean {
+        val normalizedType = normalizedContentType(contentType)
+        if (normalizedType?.contains(HTML) == true || normalizedType == TEXT_PLAIN) return true
+        val ext = extensionOf(url)
+        return ext in webpageExtensions
     }
 
     private fun supportedOrUnknown(

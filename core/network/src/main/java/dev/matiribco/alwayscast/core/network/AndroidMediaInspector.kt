@@ -3,6 +3,7 @@ package dev.matiribco.alwayscast.core.network
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import dev.matiribco.alwayscast.core.model.MediaCandidate
+import dev.matiribco.alwayscast.core.model.UnsupportedReason
 import dev.matiribco.alwayscast.core.model.Verdict
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,15 +18,19 @@ class AndroidMediaInspector(
 ) : MediaInspector {
     override suspend fun inspect(candidate: MediaCandidate): Verdict =
         withContext(Dispatchers.IO) {
-            client.newCall(headRequest(candidate)).execute().use { response ->
-                if (response.isSuccessful) {
-                    inspectResponse(
-                        candidate,
-                        response,
-                    )
-                } else {
-                    Verdict.Unknown(candidate.contentType)
+            try {
+                client.newCall(headRequest(candidate)).execute().use { response ->
+                    if (response.isSuccessful) {
+                        inspectResponse(
+                            candidate,
+                            response,
+                        )
+                    } else {
+                        Verdict.Unknown(candidate.contentType)
+                    }
                 }
+            } catch (@Suppress("SwallowedException") exception: Exception) {
+                Verdict.Unknown(candidate.contentType)
             }
         }
 
@@ -34,6 +39,9 @@ class AndroidMediaInspector(
         response: Response,
     ): Verdict {
         val containerContentType = response.header(CONTENT_TYPE) ?: candidate.contentType
+        if (containerContentType?.contains("html", ignoreCase = true) == true) {
+            return Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
+        }
         val size = response.header(CONTENT_LENGTH)?.toLongOrNull() ?: UNKNOWN_SIZE
         val windows = WindowPlanner.rangesFor(size)
         val windowBytes = windows.mapNotNull { range -> fetch(candidate, range) }
@@ -53,13 +61,19 @@ class AndroidMediaInspector(
             extractor.setDataSource(dataSource)
             ProbeVerdicts.fromCodecs(videoMimeOf(extractor), payload.containerContentType)
         } catch (
-            @Suppress("SwallowedException") exception: IOException,
+            @Suppress("SwallowedException") exception: Exception,
         ) {
             // The extractor cannot read these windows; the caller turns that into an Unknown verdict.
             Verdict.Unknown(payload.containerContentType)
         } finally {
-            extractor.release()
-            dataSource.close()
+            try {
+                extractor.release()
+            } catch (@Suppress("SwallowedException") ignored: Exception) {
+            }
+            try {
+                dataSource.close()
+            } catch (@Suppress("SwallowedException") ignored: Exception) {
+            }
         }
     }
 
