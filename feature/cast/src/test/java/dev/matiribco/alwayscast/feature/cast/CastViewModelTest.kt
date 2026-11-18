@@ -9,6 +9,7 @@ import dev.matiribco.alwayscast.core.model.UnsupportedReason
 import dev.matiribco.alwayscast.core.model.Verdict
 import dev.matiribco.alwayscast.core.network.MediaClassifier
 import dev.matiribco.alwayscast.core.network.MediaInspector
+import dev.matiribco.alwayscast.core.network.WebMediaExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -358,6 +359,92 @@ class CastViewModelTest {
             val state = viewModel.state.value
             assertEquals(Phase.IDLE, state.phase)
             assertEquals(0, recordingController.loadCallCount)
+        }
+
+    @Test
+    fun onCastClick_webpageWithMultipleCandidates_transitionsToSelectingCandidatePhase() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
+                }
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource =
+                        ResolvedSource(url = RESOLVED_PROXY_URL, contentType = MIME_MP4)
+                }
+            val candidate1 = MediaCandidate(url = "https://cdn.example/hd.mp4", label = "HD")
+            val candidate2 = MediaCandidate(url = "https://cdn.example/sd.mp4", label = "SD")
+            val fakeExtractor =
+                object : WebMediaExtractor {
+                    override suspend fun extract(
+                        url: String,
+                        headers: Map<String, String>,
+                    ): List<MediaCandidate> = listOf(candidate1, candidate2)
+                }
+            val controller = RecordingCastController()
+
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = controller,
+                    extractor = fakeExtractor,
+                )
+
+            viewModel.onUrlChange("https://ok.ru/video/12345")
+            viewModel.onCastClick()
+            advanceUntilIdle()
+
+            assertEquals(Phase.SELECTING_CANDIDATE, viewModel.state.value.phase)
+            assertEquals(2, viewModel.state.value.candidates.size)
+        }
+
+    @Test
+    fun onSelectCandidate_validCandidate_resolvesAndCastsToDevice() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Unsupported(UnsupportedReason.NO_MEDIA)
+                }
+            var resolvedCandidate: MediaCandidate? = null
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource {
+                        resolvedCandidate = candidate
+                        return ResolvedSource(url = RESOLVED_PROXY_URL, contentType = MIME_MP4)
+                    }
+                }
+            val selectedCandidate = MediaCandidate(url = "https://cdn.example/hd.mp4", label = "HD")
+            val fakeExtractor =
+                object : WebMediaExtractor {
+                    override suspend fun extract(
+                        url: String,
+                        headers: Map<String, String>,
+                    ): List<MediaCandidate> = listOf(selectedCandidate)
+                }
+            val controller = RecordingCastController()
+
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = controller,
+                    extractor = fakeExtractor,
+                )
+
+            viewModel.onSelectCandidate(selectedCandidate)
+            advanceUntilIdle()
+
+            assertEquals(Phase.CASTING, viewModel.state.value.phase)
+            assertEquals(selectedCandidate, resolvedCandidate)
+            assertEquals(1, controller.loadCallCount)
         }
 
     private class RecordingCastController : CastController {
