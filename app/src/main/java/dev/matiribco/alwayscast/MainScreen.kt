@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -82,13 +86,13 @@ private fun AlwaysCastBottomBar(
                 selected = currentDestination == MainDestination.BROWSER,
                 onClick = { onSelectDestination(MainDestination.BROWSER) },
                 label = { Text("Navegador") },
-                icon = { Text("🌐") },
+                icon = { Icon(Icons.Rounded.Language, contentDescription = "Navegador") },
             )
             NavigationBarItem(
                 selected = currentDestination == MainDestination.CAST,
                 onClick = { onSelectDestination(MainDestination.CAST) },
                 label = { Text("Castear") },
-                icon = { Text("📺") },
+                icon = { Icon(Icons.Rounded.Tv, contentDescription = "Castear") },
             )
         }
     }

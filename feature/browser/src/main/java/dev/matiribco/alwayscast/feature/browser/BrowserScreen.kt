@@ -12,8 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -233,7 +237,7 @@ private fun BrowserSearchBar(
                 onClick = actions.onGoBack,
                 modifier = Modifier.padding(end = 6.dp),
             ) {
-                Text("◀")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Atrás")
             }
         }
 
@@ -242,7 +246,7 @@ private fun BrowserSearchBar(
                 onClick = actions.onGoHome,
                 modifier = Modifier.padding(end = 6.dp),
             ) {
-                Text("🏠")
+                Icon(Icons.Rounded.Home, contentDescription = "Inicio")
             }
         }
 

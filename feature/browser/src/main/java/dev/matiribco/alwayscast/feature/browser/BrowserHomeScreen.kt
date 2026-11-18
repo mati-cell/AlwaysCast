@@ -11,10 +11,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -54,9 +63,11 @@ fun BrowserHomeScreen(
 @Composable
 private fun BrowserHomeHeader() {
     Spacer(modifier = Modifier.height(16.dp))
-    Text(
-        text = "🌐",
-        style = MaterialTheme.typography.displayMedium,
+    Icon(
+        imageVector = Icons.Rounded.Language,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(56.dp),
     )
     Spacer(modifier = Modifier.height(8.dp))
     Text(
@@ -94,13 +105,19 @@ private fun BrowserQuickShortcuts(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         OutlinedButton(onClick = { onNavigate("https://ok.ru") }) {
-            Text("🎬 OK.ru")
+            Icon(Icons.Rounded.Movie, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("OK.ru")
         }
         OutlinedButton(onClick = { onNavigate("https://www.google.com") }) {
-            Text("🔍 Google")
+            Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Google")
         }
         OutlinedButton(onClick = { onNavigate("https://vimeo.com/watch") }) {
-            Text("▶ Vimeo")
+            Icon(Icons.Rounded.PlayCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Vimeo")
         }
         OutlinedButton(
             onClick = {
@@ -110,7 +127,9 @@ private fun BrowserQuickShortcuts(
                 }
             },
         ) {
-            Text("📋 Pegar enlace")
+            Icon(Icons.Rounded.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Pegar enlace")
         }
     }
 }

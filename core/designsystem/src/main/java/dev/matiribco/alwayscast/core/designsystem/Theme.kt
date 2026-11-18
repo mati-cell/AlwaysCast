@@ -1,4 +1,4 @@
-@file:Suppress("ktlint:standard:function-naming", "FunctionNaming")
+@file:Suppress("ktlint:standard:function-naming", "FunctionNaming", "MagicNumber")
 
 package dev.matiribco.alwayscast.core.designsystem
 
@@ -13,44 +13,44 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private const val COLOR_PRIMARY_DARK = 0xFF90CAF9
-private const val COLOR_SECONDARY_DARK = 0xFF80CBC4
-private const val COLOR_TERTIARY_DARK = 0xFFFFCC80
-private const val COLOR_BACKGROUND_DARK = 0xFF121212
-private const val COLOR_SURFACE_DARK = 0xFF1E1E1E
-private const val COLOR_ERROR_DARK = 0xFFEF5350
-
-private const val COLOR_PRIMARY_LIGHT = 0xFF1976D2
-private const val COLOR_SECONDARY_LIGHT = 0xFF00897B
-private const val COLOR_TERTIARY_LIGHT = 0xFFFB8C00
-private const val COLOR_BACKGROUND_LIGHT = 0xFFF5F5F5
-private const val COLOR_SURFACE_LIGHT = 0xFFFFFFFF
-private const val COLOR_ERROR_LIGHT = 0xFFD32F2F
-
 private val DarkColorScheme =
     darkColorScheme(
-        primary = Color(COLOR_PRIMARY_DARK),
-        secondary = Color(COLOR_SECONDARY_DARK),
-        tertiary = Color(COLOR_TERTIARY_DARK),
-        background = Color(COLOR_BACKGROUND_DARK),
-        surface = Color(COLOR_SURFACE_DARK),
-        error = Color(COLOR_ERROR_DARK),
+        primary = AlwaysCastTokens.Palette.Accent,
+        onPrimary = AlwaysCastTokens.Palette.OnAccent,
+        primaryContainer = AlwaysCastTokens.Palette.AccentContainer,
+        onPrimaryContainer = AlwaysCastTokens.Palette.TextPrimaryDark,
+        background = AlwaysCastTokens.Palette.BackgroundDark,
+        onBackground = AlwaysCastTokens.Palette.TextPrimaryDark,
+        surface = AlwaysCastTokens.Palette.SurfaceDark,
+        onSurface = AlwaysCastTokens.Palette.TextPrimaryDark,
+        surfaceVariant = AlwaysCastTokens.Palette.SurfaceElevatedDark,
+        onSurfaceVariant = AlwaysCastTokens.Palette.TextSecondaryDark,
+        outline = AlwaysCastTokens.Palette.TextTertiaryDark,
+        outlineVariant = AlwaysCastTokens.Palette.BorderHairlineDark,
+        error = AlwaysCastTokens.Palette.SemanticError,
     )
 
 private val LightColorScheme =
     lightColorScheme(
-        primary = Color(COLOR_PRIMARY_LIGHT),
-        secondary = Color(COLOR_SECONDARY_LIGHT),
-        tertiary = Color(COLOR_TERTIARY_LIGHT),
-        background = Color(COLOR_BACKGROUND_LIGHT),
-        surface = Color(COLOR_SURFACE_LIGHT),
-        error = Color(COLOR_ERROR_LIGHT),
+        primary = Color(0xFF2563EB),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFDBEAFE),
+        onPrimaryContainer = Color(0xFF1E3A8A),
+        background = Color(0xFFF8FAFC),
+        onBackground = Color(0xFF0F172A),
+        surface = Color(0xFFFFFFFF),
+        onSurface = Color(0xFF0F172A),
+        surfaceVariant = Color(0xFFF1F5F9),
+        onSurfaceVariant = Color(0xFF475569),
+        outline = Color(0xFF94A3B8),
+        outlineVariant = Color(0xFFE2E8F0),
+        error = AlwaysCastTokens.Palette.SemanticError,
     )
 
 @Composable
 fun AlwaysCastTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =

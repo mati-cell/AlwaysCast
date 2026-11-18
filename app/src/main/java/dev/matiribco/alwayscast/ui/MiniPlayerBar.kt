@@ -11,7 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.matiribco.alwayscast.core.designsystem.AlwaysCastTokens
 import dev.matiribco.alwayscast.core.model.PlaybackState
 
 @Composable
@@ -48,11 +54,16 @@ fun MiniPlayerBar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = AlwaysCastTokens.Spacing.lg, vertical = AlwaysCastTokens.Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "📺", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Tv,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(AlwaysCastTokens.Spacing.md))
                 MiniPlayerInfo(playback = playback, modifier = Modifier.weight(1f))
                 MiniPlayerPlayButton(playback = playback, onPlayOrPause = onPlayOrPause)
             }
@@ -100,7 +111,7 @@ private fun MiniPlayerInfo(
 
         Text(
             text = timeText,
-            style = MaterialTheme.typography.bodySmall,
+            style = AlwaysCastTokens.Typography.TabularTime,
             color = MaterialTheme.colorScheme.outline,
         )
     }
@@ -114,17 +125,27 @@ private fun MiniPlayerPlayButton(
 ) {
     IconButton(
         onClick = onPlayOrPause,
-        modifier = modifier.size(40.dp),
+        modifier = modifier.size(48.dp),
     ) {
         if (playback.isBuffering) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(24.dp),
                 strokeWidth = 2.dp,
             )
         } else if (playback.isPlaying) {
-            Text("⏸", style = MaterialTheme.typography.titleMedium)
+            Icon(
+                imageVector = Icons.Rounded.Pause,
+                contentDescription = "Pausar",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
         } else {
-            Text("▶", style = MaterialTheme.typography.titleMedium)
+            Icon(
+                imageVector = Icons.Rounded.PlayArrow,
+                contentDescription = "Reproducir",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
         }
     }
 }

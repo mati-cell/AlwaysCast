@@ -5,16 +5,24 @@ package dev.matiribco.alwayscast.feature.cast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -34,6 +42,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
+import dev.matiribco.alwayscast.core.designsystem.AlwaysCastTokens
 import dev.matiribco.alwayscast.core.model.MediaCandidate
 
 @Composable
@@ -138,11 +147,12 @@ private fun CandidateSelectionCard(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
+        shape = RoundedCornerShape(AlwaysCastTokens.Radius.card),
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(AlwaysCastTokens.Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(AlwaysCastTokens.Spacing.md),
         ) {
             Text(
                 text = "Calidades y formatos encontrados:",
@@ -169,7 +179,8 @@ private fun CandidateSelectionCard(
                     }
                     Button(
                         onClick = { onSelectCandidate(candidate) },
-                        modifier = Modifier.padding(start = 8.dp),
+                        shape = RoundedCornerShape(AlwaysCastTokens.Radius.input),
+                        modifier = Modifier.padding(start = AlwaysCastTokens.Spacing.sm),
                     ) {
                         Text("Castear")
                     }
@@ -204,19 +215,21 @@ private fun CastActionButtons(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(AlwaysCastTokens.Spacing.md),
     ) {
         Button(
             onClick = onCastClick,
             enabled = isCastEnabled,
-            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(AlwaysCastTokens.Radius.input),
+            modifier = Modifier.weight(1f).height(48.dp),
         ) {
             Text("Castear")
         }
 
         OutlinedButton(
             onClick = onConnectClick,
-            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(AlwaysCastTokens.Radius.input),
+            modifier = Modifier.weight(1f).height(48.dp),
         ) {
             Text("Conectar")
         }
@@ -256,23 +269,45 @@ private fun DeviceStatusCard(
 
     Surface(
         color = backgroundColor,
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(AlwaysCastTokens.Radius.card),
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = AlwaysCastTokens.Spacing.lg,
+                    vertical = AlwaysCastTokens.Spacing.md,
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text =
-                    if (isConnected) {
-                        "Dispositivo: $deviceName"
-                    } else {
-                        "Sin conectar (toca el icono de Cast arriba para elegir tu Chromecast)"
-                    },
-                style = MaterialTheme.typography.bodyMedium,
-                color = textColor,
-            )
+            if (isConnected) {
+                Icon(
+                    imageVector = Icons.Rounded.CastConnected,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(AlwaysCastTokens.Spacing.md))
+                Text(
+                    text = "Conectado a $deviceName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Cast,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(AlwaysCastTokens.Spacing.md))
+                Text(
+                    text = "Sin conectar (toca el icono de Cast arriba para elegir tu Chromecast)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = textColor,
+                )
+            }
         }
     }
 }
@@ -353,12 +388,13 @@ private fun MessageCard(
                 containerColor = containerColor,
                 contentColor = contentColor,
             ),
+        shape = RoundedCornerShape(AlwaysCastTokens.Radius.card),
         modifier = modifier.fillMaxWidth(),
     ) {
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(AlwaysCastTokens.Spacing.lg),
         )
     }
 }
