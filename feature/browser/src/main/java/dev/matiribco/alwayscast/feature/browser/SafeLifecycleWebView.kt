@@ -92,11 +92,13 @@ private fun setupBridgeAndClients(
                 callbacks.onProgressChanged(newProgress)
             }
         }
+    val defaultUserAgent = webView.settings.userAgentString
     webView.webViewClient =
         SniffingWebViewClient(
             shield = shield,
             sniffer = sniffer,
             callbacks = callbacks,
+            defaultUserAgent = defaultUserAgent,
         )
 }
 
