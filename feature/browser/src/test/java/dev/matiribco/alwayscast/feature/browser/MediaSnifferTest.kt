@@ -7,7 +7,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MediaSnifferTest {
-
     private val sniffer = MediaSniffer()
 
     @Test
@@ -70,10 +69,11 @@ class MediaSnifferTest {
     fun sniff_conHeaders_preservaRefererYUserAgent() {
         // Arrange
         val url = "https://cdn.example.com/stream.m3u8"
-        val headers = mapOf(
-            "Referer" to "https://example.com/watch",
-            "User-Agent" to "Mozilla/5.0 Android"
-        )
+        val headers =
+            mapOf(
+                "Referer" to "https://example.com/watch",
+                "User-Agent" to "Mozilla/5.0 Android",
+            )
 
         // Act
         val candidate = sniffer.sniff(url = url, headers = headers)

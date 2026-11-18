@@ -8,7 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserViewModelTest {
-
     private val viewModel = BrowserViewModel()
 
     @Test
@@ -26,28 +25,34 @@ class BrowserViewModelTest {
     @Test
     fun onCandidateDetected_conNuevoCandidato_agregaALista() {
         // Arrange
-        val candidate = MediaCandidate(
-            url = "https://example.com/video.mp4",
-            contentType = "video/mp4",
-            source = CandidateSource.BROWSER
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://example.com/video.mp4",
+                contentType = "video/mp4",
+                source = CandidateSource.BROWSER,
+            )
 
         // Act
         viewModel.onCandidateDetected(candidate)
 
         // Assert
         assertEquals(1, viewModel.uiState.value.candidates.size)
-        assertEquals(candidate, viewModel.uiState.value.candidates.first())
+        assertEquals(
+            candidate,
+            viewModel.uiState.value.candidates
+                .first(),
+        )
     }
 
     @Test
     fun onCandidateDetected_conCandidatoDuplicado_noAgregaDuplicado() {
         // Arrange
-        val candidate = MediaCandidate(
-            url = "https://example.com/video.mp4",
-            contentType = "video/mp4",
-            source = CandidateSource.BROWSER
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://example.com/video.mp4",
+                contentType = "video/mp4",
+                source = CandidateSource.BROWSER,
+            )
 
         // Act
         viewModel.onCandidateDetected(candidate)
@@ -60,18 +65,22 @@ class BrowserViewModelTest {
     @Test
     fun onClearCandidates_alInvocar_limpiaLista() {
         // Arrange
-        val candidate = MediaCandidate(
-            url = "https://example.com/video.mp4",
-            contentType = "video/mp4",
-            source = CandidateSource.BROWSER
-        )
+        val candidate =
+            MediaCandidate(
+                url = "https://example.com/video.mp4",
+                contentType = "video/mp4",
+                source = CandidateSource.BROWSER,
+            )
         viewModel.onCandidateDetected(candidate)
 
         // Act
         viewModel.onClearCandidates()
 
         // Assert
-        assertTrue(viewModel.uiState.value.candidates.isEmpty())
+        assertTrue(
+            viewModel.uiState.value.candidates
+                .isEmpty(),
+        )
     }
 
     @Test
@@ -95,11 +104,12 @@ class BrowserViewModelTest {
     @Test
     fun onPageStarted_conNuevaUrl_limpiaCandidatosPreviosYMarcaLoading() {
         // Arrange
-        val oldCandidate = MediaCandidate(
-            url = "https://old.com/video.mp4",
-            contentType = "video/mp4",
-            source = CandidateSource.BROWSER
-        )
+        val oldCandidate =
+            MediaCandidate(
+                url = "https://old.com/video.mp4",
+                contentType = "video/mp4",
+                source = CandidateSource.BROWSER,
+            )
         viewModel.onCandidateDetected(oldCandidate)
         val newUrl = "https://newsite.com"
 
@@ -107,7 +117,10 @@ class BrowserViewModelTest {
         viewModel.onPageStarted(newUrl)
 
         // Assert
-        assertTrue(viewModel.uiState.value.candidates.isEmpty())
+        assertTrue(
+            viewModel.uiState.value.candidates
+                .isEmpty(),
+        )
         assertTrue(viewModel.uiState.value.isLoading)
         assertEquals(newUrl, viewModel.uiState.value.currentUrl)
     }
