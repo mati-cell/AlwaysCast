@@ -43,7 +43,7 @@ class DefaultWebMediaExtractor(
         url: String,
         html: String,
     ): List<MediaCandidate> {
-        val okCandidates = OkRuParser.parse(url, html)
+        val okCandidates = OkRuParser.parse(html)
         val candidates = okCandidates.ifEmpty { Html5MediaParser.parse(url, html) }
         return candidates.distinctBy { it.url }
     }

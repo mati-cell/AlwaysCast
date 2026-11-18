@@ -1,14 +1,20 @@
 package dev.matiribco.alwayscast.core.proxy
 
 import dev.matiribco.alwayscast.core.model.MediaCandidate
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
+import io.ktor.server.routing.head
+import io.ktor.server.routing.options
 import io.ktor.server.routing.routing
 import okhttp3.OkHttpClient
 import java.io.Closeable
@@ -66,20 +72,41 @@ class CastProxyServer(
         return proxyUrlFor(candidate.url)
     }
 
-    private fun proxyUrlFor(upstream: String): String = "http://$host:$boundPort${ProxyPath.forToken(token, upstream)}"
+    private fun proxyUrlFor(upstream: String): String =
+        "http://${hostProvider()}:$boundPort${ProxyPath.forToken(token, upstream)}"
 
     private fun Application.installRoutes() {
-        routing {
-            get(ROUTE) {
-                val upstream = call.parameters[SEGMENT_PARAMETER]?.let(ProxyPath::decode)
-                val tokenMatches = call.parameters[TOKEN_PARAMETER] == token
+        intercept(ApplicationCallPipeline.Plugins) {
+            call.response.header(HttpHeaders.AccessControlAllowOrigin, "*")
+            call.response.header(HttpHeaders.AccessControlAllowMethods, "GET, HEAD, OPTIONS")
+            call.response.header(HttpHeaders.AccessControlAllowHeaders, "*")
+            call.response.header(
+                HttpHeaders.AccessControlExposeHeaders,
+                "Content-Length, Content-Range, Accept-Ranges, Content-Type",
+            )
+        }
 
-                if (upstream != null && tokenMatches) {
-                    forwarder.forward(call, upstream)
-                } else {
-                    call.respond(HttpStatusCode.NotFound)
-                }
+        routing {
+            options(ROUTE) {
+                call.respond(HttpStatusCode.NoContent)
             }
+            head(ROUTE) {
+                handleProxyCall(call)
+            }
+            get(ROUTE) {
+                handleProxyCall(call)
+            }
+        }
+    }
+
+    private suspend fun handleProxyCall(call: ApplicationCall) {
+        val upstream = call.parameters[SEGMENT_PARAMETER]?.let(ProxyPath::decode)
+        val tokenMatches = call.parameters[TOKEN_PARAMETER] == token
+
+        if (upstream != null && tokenMatches) {
+            forwarder.forward(call, upstream)
+        } else {
+            call.respond(HttpStatusCode.NotFound)
         }
     }
 

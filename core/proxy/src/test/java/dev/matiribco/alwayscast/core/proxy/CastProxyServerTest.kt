@@ -145,6 +145,24 @@ class CastProxyServerTest {
         assertTrue(url.startsWith("http://127.0.0.1:${server.boundPort}/s/$TOKEN/"))
     }
 
+    @Test
+    fun options_preflight_returnsNoContentWithCorsHeaders() {
+        val upstream = origin.url("movie.mp4").toString()
+        val path = proxyPath(upstream)
+        val request =
+            HttpRequest
+                .newBuilder(URI.create("http://127.0.0.1:${server.boundPort}$path"))
+                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                .build()
+        val response = http.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(204, response.statusCode())
+        val allowOrigin = response.headers().firstValue("Access-Control-Allow-Origin").orElse(null)
+        val allowMethods = response.headers().firstValue("Access-Control-Allow-Methods").orElse("")
+        assertEquals("*", allowOrigin)
+        assertTrue(allowMethods.contains("GET"))
+    }
+
     private fun proxyPath(upstream: String): String = ProxyPath.forToken(TOKEN, upstream)
 
     private fun get(

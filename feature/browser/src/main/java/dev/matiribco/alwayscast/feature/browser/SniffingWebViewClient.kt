@@ -1,6 +1,8 @@
 package dev.matiribco.alwayscast.feature.browser
 
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -11,7 +13,11 @@ class SniffingWebViewClient(
     private val shield: AntiPopupShield,
     private val sniffer: MediaSniffer,
     private val callbacks: BrowserWebViewCallbacks,
+    private val defaultUserAgent: String = "",
 ) : WebViewClient() {
+    @Volatile
+    private var currentPageUrl: String? = null
+
     override fun shouldOverrideUrlLoading(
         view: WebView?,
         request: WebResourceRequest?,
@@ -27,17 +33,18 @@ class SniffingWebViewClient(
         val requestUrl = request?.url?.toString()
         if (requestUrl != null) {
             val headers = request.requestHeaders?.toMutableMap() ?: mutableMapOf()
-            val pageUrl = view?.url
+            val pageUrl = currentPageUrl
             if (!headers.containsKey("Referer") && pageUrl != null) {
                 headers["Referer"] = pageUrl
             }
-            val userAgent = view?.settings?.userAgentString
-            if (!headers.containsKey("User-Agent") && userAgent != null) {
-                headers["User-Agent"] = userAgent
+            if (!headers.containsKey("User-Agent") && defaultUserAgent.isNotBlank()) {
+                headers["User-Agent"] = defaultUserAgent
             }
             val candidate = sniffer.sniff(url = requestUrl, headers = headers)
             if (candidate != null) {
-                callbacks.onCandidateDetected(candidate)
+                postToMain {
+                    callbacks.onCandidateDetected(candidate)
+                }
             }
         }
         return super.shouldInterceptRequest(view, request)
@@ -50,6 +57,7 @@ class SniffingWebViewClient(
     ) {
         super.onPageStarted(view, url, favicon)
         if (url != null) {
+            currentPageUrl = url
             callbacks.onPageStarted(url)
             injectDefensiveScripts(view)
         }
@@ -61,6 +69,7 @@ class SniffingWebViewClient(
     ) {
         super.onPageFinished(view, url)
         if (url != null) {
+            currentPageUrl = url
             callbacks.onPageFinished(url, view?.title)
             callbacks.onHistoryChanged(view?.canGoBack() == true, view?.canGoForward() == true)
             injectDefensiveScripts(view)
@@ -71,6 +80,17 @@ class SniffingWebViewClient(
         view: WebView?,
         detail: RenderProcessGoneDetail?,
     ): Boolean = true
+
+    private fun postToMain(action: () -> Unit) {
+        val dispatched =
+            runCatching {
+                Handler(Looper.getMainLooper()).post(action)
+            }.getOrDefault(false)
+
+        if (!dispatched) {
+            action()
+        }
+    }
 
     private fun injectDefensiveScripts(view: WebView?) {
         view?.evaluateJavascript(shield.getShieldScript(), null)

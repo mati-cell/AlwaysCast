@@ -1,5 +1,7 @@
 package dev.matiribco.alwayscast.feature.browser
 
+import android.os.Handler
+import android.os.Looper
 import android.webkit.JavascriptInterface
 import dev.matiribco.alwayscast.core.model.MediaCandidate
 
@@ -14,7 +16,20 @@ class MediaDetectionBridge(
     ) {
         val candidate = sniffer.sniff(url = url, contentType = mimeType)
         if (candidate != null) {
-            onCandidateDetected(candidate)
+            postToMain {
+                onCandidateDetected(candidate)
+            }
+        }
+    }
+
+    private fun postToMain(action: () -> Unit) {
+        val dispatched =
+            runCatching {
+                Handler(Looper.getMainLooper()).post(action)
+            }.getOrDefault(false)
+
+        if (!dispatched) {
+            action()
         }
     }
 
