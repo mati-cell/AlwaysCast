@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -21,6 +22,7 @@ fun SafeLifecycleWebView(
     url: String,
     callbacks: BrowserWebViewCallbacks,
     modifier: Modifier = Modifier,
+    onWebViewCreated: ((WebView) -> Unit)? = null,
 ) {
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val shield = remember { AntiPopupShield() }
@@ -29,10 +31,11 @@ fun SafeLifecycleWebView(
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            WebView(context.applicationContext).apply {
+            WebView(context).apply {
                 setupWebViewSettings(this)
                 setupBridgeAndClients(this, shield, sniffer, callbacks)
                 webViewRef = this
+                onWebViewCreated?.invoke(this)
                 if (url.isNotBlank()) {
                     loadUrl(url)
                 }
@@ -101,6 +104,7 @@ private fun cleanUpWebView(webView: WebView) {
     (webView.parent as? ViewGroup)?.removeView(webView)
     webView.stopLoading()
     webView.webChromeClient = null
+    webView.webViewClient = WebViewClient()
     webView.removeJavascriptInterface(MediaDetectionBridge.JAVASCRIPT_INTERFACE_NAME)
     webView.clearHistory()
     webView.removeAllViews()

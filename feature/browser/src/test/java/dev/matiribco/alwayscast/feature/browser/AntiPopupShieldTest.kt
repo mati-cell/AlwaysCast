@@ -56,6 +56,18 @@ class AntiPopupShieldTest {
     }
 
     @Test
+    fun shouldBlockUrl_conAboutBlank_retornaFalse() {
+        // Arrange
+        val url = "about:blank"
+
+        // Act
+        val result = shield.shouldBlockUrl(url)
+
+        // Assert
+        assertFalse(result)
+    }
+
+    @Test
     fun shouldBlockUrl_conEsquemaDesconocido_retornaTrue() {
         // Arrange
         val url = "tel:+123456789"
@@ -74,14 +86,5 @@ class AntiPopupShieldTest {
 
         // Assert
         assertTrue(script.contains("window.open"))
-    }
-
-    @Test
-    fun getShieldScript_alInvocar_contieneNeutralizacionTargetBlank() {
-        // Arrange & Act
-        val script = shield.getShieldScript()
-
-        // Assert
-        assertTrue(script.contains("_blank"))
     }
 }

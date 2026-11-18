@@ -2,6 +2,8 @@
 
 package dev.matiribco.alwayscast.feature.browser
 
+import android.webkit.WebView
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,14 +44,15 @@ fun BrowserRoute(
                 onSelectCandidate = onCastCandidate,
                 onToggleCandidateSheet = viewModel::onToggleCandidateSheet,
                 onDismissCandidateSheet = viewModel::onDismissCandidateSheet,
+                onPageStarted = viewModel::onPageStarted,
+                onPageFinished = viewModel::onPageFinished,
+                onHistoryChanged = viewModel::onHistoryChanged,
             )
         }
 
     BrowserScreen(
         state = state,
         actions = actions,
-        onPageStarted = viewModel::onPageStarted,
-        onPageFinished = viewModel::onPageFinished,
         modifier = modifier,
     )
 }
@@ -57,25 +61,23 @@ fun BrowserRoute(
 fun BrowserScreen(
     state: BrowserUiState,
     actions: BrowserActions,
-    onPageStarted: (String) -> Unit,
-    onPageFinished: (String, String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var urlInput by remember(state.currentUrl) { mutableStateOf(state.currentUrl) }
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+    BackHandler(enabled = state.canGoBack) {
+        webViewInstance?.goBack()
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             if (state.candidates.isNotEmpty()) {
-                ExtendedFloatingActionButton(
+                BrowserFab(
+                    candidatesCount = state.candidates.size,
                     onClick = actions.onToggleCandidateSheet,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ) {
-                    val count = state.candidates.size
-                    val text = if (count == 1) "1 video detectado" else "$count videos detectados"
-                    Text(text = text)
-                }
+                )
             }
         },
     ) { innerPadding ->
@@ -87,30 +89,22 @@ fun BrowserScreen(
         ) {
             BrowserSearchBar(
                 url = urlInput,
+                canGoBack = state.canGoBack,
                 onUrlChange = { urlInput = it },
                 onNavigate = { actions.onNavigate(urlInput) },
+                onGoBack = { webViewInstance?.goBack() },
             )
 
             if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                val callbacks =
-                    remember(actions, onPageStarted, onPageFinished) {
-                        BrowserWebViewCallbacks(
-                            onPageStarted = onPageStarted,
-                            onPageFinished = onPageFinished,
-                            onCandidateDetected = actions.onCandidateDetected,
-                        )
-                    }
-
-                SafeLifecycleWebView(
-                    url = state.currentUrl,
-                    callbacks = callbacks,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            BrowserWebViewContainer(
+                currentUrl = state.currentUrl,
+                actions = actions,
+                onWebViewCreated = { webViewInstance = it },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
         }
 
         if (state.isCandidateSheetVisible) {
@@ -124,19 +118,76 @@ fun BrowserScreen(
 }
 
 @Composable
+private fun BrowserWebViewContainer(
+    currentUrl: String,
+    actions: BrowserActions,
+    onWebViewCreated: (WebView) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier) {
+        val callbacks =
+            remember(actions) {
+                BrowserWebViewCallbacks(
+                    onPageStarted = actions.onPageStarted,
+                    onPageFinished = actions.onPageFinished,
+                    onCandidateDetected = actions.onCandidateDetected,
+                    onHistoryChanged = actions.onHistoryChanged,
+                )
+            }
+
+        SafeLifecycleWebView(
+            url = currentUrl,
+            callbacks = callbacks,
+            onWebViewCreated = onWebViewCreated,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun BrowserFab(
+    candidatesCount: Int,
+    onClick: () -> Unit,
+) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        val text =
+            if (candidatesCount == 1) {
+                "1 video detectado"
+            } else {
+                "$candidatesCount videos detectados"
+            }
+        Text(text = text)
+    }
+}
+
+@Composable
 private fun BrowserSearchBar(
     url: String,
+    canGoBack: Boolean,
     onUrlChange: (String) -> Unit,
     onNavigate: () -> Unit,
-    modifier: Modifier = Modifier,
+    onGoBack: () -> Unit,
 ) {
     Row(
         modifier =
-            modifier
+            Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (canGoBack) {
+            OutlinedButton(
+                onClick = onGoBack,
+                modifier = Modifier.padding(end = 8.dp),
+            ) {
+                Text("◀")
+            }
+        }
+
         OutlinedTextField(
             value = url,
             onValueChange = onUrlChange,

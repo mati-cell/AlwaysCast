@@ -31,10 +31,9 @@ class MediaDetectionBridge(
 
     var originalPlay = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function() {
-        if (this.currentSrc) {
-            notifyMedia(this.currentSrc, this.type);
-        } else if (this.src) {
-            notifyMedia(this.src, this.type);
+        var src = this.currentSrc || this.src;
+        if (src) {
+            notifyMedia(src, '');
         }
         return originalPlay.apply(this, arguments);
     };
@@ -42,10 +41,11 @@ class MediaDetectionBridge(
     var videos = document.getElementsByTagName('video');
     for (var i = 0; i < videos.length; i++) {
         var v = videos[i];
-        if (v.src) notifyMedia(v.src, v.type);
+        if (v.currentSrc) notifyMedia(v.currentSrc, '');
+        else if (v.src) notifyMedia(v.src, '');
         var sources = v.getElementsByTagName('source');
         for (var j = 0; j < sources.length; j++) {
-            if (sources[j].src) notifyMedia(sources[j].src, sources[j].type);
+            if (sources[j].src) notifyMedia(sources[j].src, sources[j].type || '');
         }
     }
 })();

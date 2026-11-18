@@ -93,11 +93,14 @@ private fun CandidateCard(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = candidate.label ?: candidate.contentType ?: "Video",
+                    text = formatCandidateTitle(candidate),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -116,3 +119,12 @@ private fun CandidateCard(
         }
     }
 }
+
+private fun formatCandidateTitle(candidate: MediaCandidate): String =
+    candidate.label ?: when (candidate.contentType) {
+        MediaSniffer.MIME_HLS -> "Transmisión HLS (Adaptativa)"
+        MediaSniffer.MIME_MP4 -> "Video MP4"
+        MediaSniffer.MIME_MKV -> "Video Matroska (MKV)"
+        MediaSniffer.MIME_WEBM -> "Video WebM"
+        else -> candidate.contentType ?: "Video"
+    }

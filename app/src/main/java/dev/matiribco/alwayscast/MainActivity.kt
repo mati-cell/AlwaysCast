@@ -109,8 +109,8 @@ class MainActivity : AppCompatActivity() {
         val lower = url.lowercase()
         return lower.endsWith(".mp4") ||
             lower.endsWith(".m3u8") ||
-            lower.endsWith(".mpd") ||
-            lower.endsWith(".webm")
+            lower.endsWith(".webm") ||
+            lower.endsWith(".mkv")
     }
 
     private fun checkNotificationPermission() {

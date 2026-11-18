@@ -17,22 +17,9 @@ class AntiPopupShield {
         const val SHIELD_SCRIPT = """
 (function() {
     window.open = function() {
-        console.warn('[AlwaysCast] Blocked window.open');
-        return {
-            focus: function() {},
-            close: function() {},
-            closed: false
-        };
+        console.warn('[AlwaysCast] Blocked popup window');
+        return null;
     };
-    document.addEventListener('click', function(e) {
-        var el = e.target;
-        while (el && el.tagName !== 'A') {
-            el = el.parentElement;
-        }
-        if (el && el.tagName === 'A' && el.target === '_blank') {
-            el.target = '_self';
-        }
-    }, true);
 })();
 """
     }

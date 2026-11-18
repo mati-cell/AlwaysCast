@@ -6,5 +6,6 @@ data class BrowserWebViewCallbacks(
     val onPageStarted: (String) -> Unit,
     val onPageFinished: (String, String?) -> Unit,
     val onCandidateDetected: (MediaCandidate) -> Unit,
+    val onHistoryChanged: (Boolean, Boolean) -> Unit = { _, _ -> },
     val onProgressChanged: (Int) -> Unit = {},
 )

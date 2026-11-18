@@ -26,7 +26,15 @@ class SniffingWebViewClient(
     ): WebResourceResponse? {
         val requestUrl = request?.url?.toString()
         if (requestUrl != null) {
-            val headers = request.requestHeaders ?: emptyMap()
+            val headers = request.requestHeaders?.toMutableMap() ?: mutableMapOf()
+            val pageUrl = view?.url
+            if (!headers.containsKey("Referer") && pageUrl != null) {
+                headers["Referer"] = pageUrl
+            }
+            val userAgent = view?.settings?.userAgentString
+            if (!headers.containsKey("User-Agent") && userAgent != null) {
+                headers["User-Agent"] = userAgent
+            }
             val candidate = sniffer.sniff(url = requestUrl, headers = headers)
             if (candidate != null) {
                 callbacks.onCandidateDetected(candidate)
@@ -54,6 +62,7 @@ class SniffingWebViewClient(
         super.onPageFinished(view, url)
         if (url != null) {
             callbacks.onPageFinished(url, view?.title)
+            callbacks.onHistoryChanged(view?.canGoBack() == true, view?.canGoForward() == true)
             injectDefensiveScripts(view)
         }
     }

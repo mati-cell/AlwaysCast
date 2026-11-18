@@ -2,6 +2,7 @@ package dev.matiribco.alwayscast.feature.browser
 
 import dev.matiribco.alwayscast.core.model.CandidateSource
 import dev.matiribco.alwayscast.core.model.MediaCandidate
+import java.net.URI
 import java.util.Locale
 
 class MediaSniffer {
@@ -10,8 +11,8 @@ class MediaSniffer {
         headers: Map<String, String> = emptyMap(),
         contentType: String? = null,
     ): MediaCandidate? {
-        val lowerUrl = url.lowercase(Locale.ROOT)
-        val resolvedMime = resolveMimeType(lowerUrl, contentType) ?: return null
+        val path = extractPath(url)
+        val resolvedMime = resolveMimeType(path, contentType) ?: return null
 
         return MediaCandidate(
             url = url,
@@ -21,15 +22,24 @@ class MediaSniffer {
         )
     }
 
+    private fun extractPath(url: String): String =
+        try {
+            val uri = URI(url)
+            uri.path?.lowercase(Locale.ROOT) ?: ""
+        } catch (_: Exception) {
+            val noQuery = url.substringBefore('?').substringBefore('#')
+            noQuery.lowercase(Locale.ROOT)
+        }
+
     private fun resolveMimeType(
-        lowerUrl: String,
+        path: String,
         contentType: String?,
     ): String? =
         when {
-            lowerUrl.contains(".m3u8") -> MIME_HLS
-            lowerUrl.contains(".mp4") -> MIME_MP4
-            lowerUrl.contains(".webm") -> MIME_WEBM
-            lowerUrl.contains(".mpd") -> MIME_DASH
+            path.endsWith(".m3u8") -> MIME_HLS
+            path.endsWith(".mp4") -> MIME_MP4
+            path.endsWith(".mkv") -> MIME_MKV
+            path.endsWith(".webm") -> MIME_WEBM
             contentType?.startsWith("video/") == true -> contentType
             contentType?.contains("mpegurl", ignoreCase = true) == true -> MIME_HLS
             else -> null
@@ -38,7 +48,7 @@ class MediaSniffer {
     companion object {
         const val MIME_HLS = "application/x-mpegURL"
         const val MIME_MP4 = "video/mp4"
+        const val MIME_MKV = "video/x-matroska"
         const val MIME_WEBM = "video/webm"
-        const val MIME_DASH = "application/dash+xml"
     }
 }

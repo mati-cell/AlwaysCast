@@ -20,7 +20,7 @@ class MediaSnifferTest {
         // Assert
         assertNotNull(candidate)
         assertEquals(url, candidate?.url)
-        assertEquals("application/x-mpegURL", candidate?.contentType)
+        assertEquals(MediaSniffer.MIME_HLS, candidate?.contentType)
         assertEquals(CandidateSource.BROWSER, candidate?.source)
     }
 
@@ -35,8 +35,50 @@ class MediaSnifferTest {
         // Assert
         assertNotNull(candidate)
         assertEquals(url, candidate?.url)
-        assertEquals("video/mp4", candidate?.contentType)
+        assertEquals(MediaSniffer.MIME_MP4, candidate?.contentType)
         assertEquals(CandidateSource.BROWSER, candidate?.source)
+    }
+
+    @Test
+    fun sniff_conUrlMkv_retornaMediaCandidateMkv() {
+        // Arrange
+        val url = "https://cdn.example.com/videos/movie.mkv?auth=abc"
+
+        // Act
+        val candidate = sniffer.sniff(url = url)
+
+        // Assert
+        assertNotNull(candidate)
+        assertEquals(url, candidate?.url)
+        assertEquals(MediaSniffer.MIME_MKV, candidate?.contentType)
+        assertEquals(CandidateSource.BROWSER, candidate?.source)
+    }
+
+    @Test
+    fun sniff_conUrlWebm_retornaMediaCandidateWebm() {
+        // Arrange
+        val url = "https://cdn.example.com/clip.webm"
+
+        // Act
+        val candidate = sniffer.sniff(url = url)
+
+        // Assert
+        assertNotNull(candidate)
+        assertEquals(url, candidate?.url)
+        assertEquals(MediaSniffer.MIME_WEBM, candidate?.contentType)
+    }
+
+    @Test
+    fun sniff_conFalsoPositivoDeJsOImagen_retornaNull() {
+        // Arrange
+        val jsUrl = "https://cdn.example.com/assets/player.mp4.js"
+        val svgUrl = "https://site.com/static/mp4-logo.svg"
+        val hosterUrl = "https://mp4upload.com/embed-xyz"
+
+        // Act & Assert
+        assertNull(sniffer.sniff(url = jsUrl))
+        assertNull(sniffer.sniff(url = svgUrl))
+        assertNull(sniffer.sniff(url = hosterUrl))
     }
 
     @Test

@@ -124,4 +124,18 @@ class BrowserViewModelTest {
         assertTrue(viewModel.uiState.value.isLoading)
         assertEquals(newUrl, viewModel.uiState.value.currentUrl)
     }
+
+    @Test
+    fun onHistoryChanged_conValores_actualizaEstadoDeNavegacion() {
+        // Arrange & Assert initial state
+        assertFalse(viewModel.uiState.value.canGoBack)
+        assertFalse(viewModel.uiState.value.canGoForward)
+
+        // Act
+        viewModel.onHistoryChanged(canGoBack = true, canGoForward = false)
+
+        // Assert
+        assertTrue(viewModel.uiState.value.canGoBack)
+        assertFalse(viewModel.uiState.value.canGoForward)
+    }
 }

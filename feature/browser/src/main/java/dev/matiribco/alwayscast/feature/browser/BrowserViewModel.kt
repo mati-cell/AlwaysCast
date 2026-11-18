@@ -38,6 +38,18 @@ class BrowserViewModel : ViewModel() {
         }
     }
 
+    fun onHistoryChanged(
+        canGoBack: Boolean,
+        canGoForward: Boolean,
+    ) {
+        _uiState.update {
+            it.copy(
+                canGoBack = canGoBack,
+                canGoForward = canGoForward,
+            )
+        }
+    }
+
     fun onCandidateDetected(candidate: MediaCandidate) {
         _uiState.update { current ->
             if (current.candidates.any { it.url == candidate.url }) {

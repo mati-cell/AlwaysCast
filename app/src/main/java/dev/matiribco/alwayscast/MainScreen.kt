@@ -5,6 +5,7 @@ package dev.matiribco.alwayscast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import dev.matiribco.alwayscast.core.model.MediaCandidate
 import dev.matiribco.alwayscast.feature.browser.BrowserRoute
 import dev.matiribco.alwayscast.feature.browser.BrowserViewModel
@@ -59,16 +61,23 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
         ) {
-            when (currentDestination) {
-                MainDestination.BROWSER -> {
-                    BrowserRoute(
-                        viewModel = browserViewModel,
-                        onCastCandidate = onCastCandidate,
-                    )
-                }
-                MainDestination.CAST -> {
-                    CastRoute(viewModel = castViewModel)
-                }
+            val isBrowser = currentDestination == MainDestination.BROWSER
+            Box(
+                modifier =
+                    if (isBrowser) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier.size(0.dp)
+                    },
+            ) {
+                BrowserRoute(
+                    viewModel = browserViewModel,
+                    onCastCandidate = onCastCandidate,
+                )
+            }
+
+            if (currentDestination == MainDestination.CAST) {
+                CastRoute(viewModel = castViewModel)
             }
         }
     }
