@@ -21,6 +21,7 @@ android {
 
 dependencies {
     implementation(project(":feature:cast"))
+    implementation(project(":feature:browser"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:model"))
     implementation(project(":core:network"))
