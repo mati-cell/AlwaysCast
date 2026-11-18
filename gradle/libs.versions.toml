@@ -14,8 +14,10 @@ lifecycle = "2.8.7"
 activity-compose = "1.9.3"
 appcompat = "1.7.0"
 compose-bom = "2024.10.01"
+json = "20240303"
 
 [libraries]
+org-json = { module = "org.json:json", version.ref = "json" }
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
