@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+@Suppress("TooManyFunctions")
 class CastViewModel(
     private val classifier: MediaClassifier,
     private val resolver: MediaSourceResolver,
@@ -26,6 +27,34 @@ class CastViewModel(
     val state: StateFlow<CastUiState> = _state.asStateFlow()
 
     private var currentUrl: String = ""
+
+    init {
+        viewModelScope.launch {
+            controller.playbackState.collect { playback ->
+                _state.value = _state.value.copy(playback = playback)
+            }
+        }
+    }
+
+    fun onPlayOrPause() {
+        controller.playOrPause()
+    }
+
+    fun onSeekTo(positionMs: Long) {
+        controller.seekToMillis(positionMs)
+    }
+
+    fun onForward() {
+        controller.forward(DEFAULT_SEEK_SECONDS)
+    }
+
+    fun onRewind() {
+        controller.rewind(DEFAULT_SEEK_SECONDS)
+    }
+
+    fun onStop() {
+        controller.stop()
+    }
 
     fun onUrlChange(url: String) {
         currentUrl = url.trim()
@@ -156,6 +185,7 @@ class CastViewModel(
         }
 
     private companion object {
+        const val DEFAULT_SEEK_SECONDS = 10.0
         const val DEFAULT_DEVICE_NAME = "Chromecast"
         const val NO_DEVICE_FOUND_MESSAGE = "No se encontró el Chromecast en la red"
         const val LOAD_ERROR_PREFIX = "Error al cargar el video"

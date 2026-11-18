@@ -50,6 +50,11 @@ fun CastRoute(
                 onCastClick = viewModel::onCastClick,
                 onConnectClick = viewModel::onConnectClick,
                 onSelectCandidate = viewModel::onSelectCandidate,
+                onPlayOrPause = viewModel::onPlayOrPause,
+                onSeekTo = viewModel::onSeekTo,
+                onForward = viewModel::onForward,
+                onRewind = viewModel::onRewind,
+                onStop = viewModel::onStop,
             ),
         modifier = modifier,
     )
@@ -76,6 +81,13 @@ fun CastScreen(
             CastHeader()
 
             DeviceStatusCard(deviceName = state.deviceName)
+
+            if (state.playback.hasActiveMedia) {
+                PlaybackControlsCard(
+                    playback = state.playback,
+                    actions = actions,
+                )
+            }
 
             OutlinedTextField(
                 value = textInput,

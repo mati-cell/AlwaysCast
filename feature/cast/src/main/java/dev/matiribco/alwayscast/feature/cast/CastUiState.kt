@@ -1,6 +1,7 @@
 package dev.matiribco.alwayscast.feature.cast
 
 import dev.matiribco.alwayscast.core.model.MediaCandidate
+import dev.matiribco.alwayscast.core.model.PlaybackState
 
 enum class Phase {
     IDLE,
@@ -18,6 +19,7 @@ data class CastUiState(
     val deviceName: String? = null,
     val message: String? = null,
     val candidates: List<MediaCandidate> = emptyList(),
+    val playback: PlaybackState = PlaybackState.IDLE,
 ) {
     companion object {
         fun idle(): CastUiState = CastUiState()

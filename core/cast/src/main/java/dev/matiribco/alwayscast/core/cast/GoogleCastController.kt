@@ -4,9 +4,12 @@ import android.content.Context
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
+import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
+import com.google.android.gms.cast.framework.media.RemoteMediaClient
+import dev.matiribco.alwayscast.core.model.PlaybackState
 import dev.matiribco.alwayscast.core.model.ResolvedSource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlin.Result
 import dev.matiribco.alwayscast.core.model.CastState as DomainCastState
 
+@Suppress("TooManyFunctions", "DEPRECATION")
 class GoogleCastController(
     private val context: Context,
     private val castContext: CastContext = CastContext.getSharedInstance(context),
@@ -22,8 +26,27 @@ class GoogleCastController(
     private val stateFlow = MutableStateFlow<DomainCastState>(DomainCastState.Idle)
     override val state = stateFlow.asStateFlow()
 
+    private val playbackStateFlow = MutableStateFlow(PlaybackState.IDLE)
+    override val playbackState = playbackStateFlow.asStateFlow()
+
     private var connectDeferred: CompletableDeferred<Result<String>>? = null
     private var currentSession: CastSession? = null
+
+    private val mediaCallback =
+        object : RemoteMediaClient.Callback() {
+            override fun onStatusUpdated() {
+                syncPlaybackState()
+            }
+
+            override fun onMetadataUpdated() {
+                syncPlaybackState()
+            }
+        }
+
+    private val progressListener =
+        RemoteMediaClient.ProgressListener { progressMs, durationMs ->
+            syncPlaybackState(progressOverride = progressMs, durationOverride = durationMs)
+        }
 
     private val sessionManagerListener =
         object : SessionManagerListener<CastSession> {
@@ -36,6 +59,7 @@ class GoogleCastController(
                 sessionId: String,
             ) {
                 currentSession = session
+                attachRemoteMediaClient(session)
                 val name = session.castDevice?.friendlyName ?: DEFAULT_DEVICE_NAME
                 stateFlow.value = DomainCastState.Connected(name)
                 connectDeferred?.complete(Result.success(name))
@@ -45,6 +69,7 @@ class GoogleCastController(
                 session: CastSession,
                 error: Int,
             ) {
+                detachRemoteMediaClient(currentSession)
                 currentSession = null
                 val errorMsg = "Error al iniciar sesión de Cast ($error)"
                 stateFlow.value = DomainCastState.Error(errorMsg)
@@ -59,6 +84,7 @@ class GoogleCastController(
                 session: CastSession,
                 error: Int,
             ) {
+                detachRemoteMediaClient(session)
                 currentSession = null
                 stateFlow.value = DomainCastState.Idle
             }
@@ -75,6 +101,7 @@ class GoogleCastController(
                 wasSuspended: Boolean,
             ) {
                 currentSession = session
+                attachRemoteMediaClient(session)
                 val name = session.castDevice?.friendlyName ?: DEFAULT_DEVICE_NAME
                 stateFlow.value = DomainCastState.Connected(name)
             }
@@ -83,6 +110,7 @@ class GoogleCastController(
                 session: CastSession,
                 error: Int,
             ) {
+                detachRemoteMediaClient(currentSession)
                 currentSession = null
                 stateFlow.value = DomainCastState.Idle
             }
@@ -91,6 +119,7 @@ class GoogleCastController(
                 session: CastSession,
                 reason: Int,
             ) {
+                detachRemoteMediaClient(session)
                 stateFlow.value = DomainCastState.Idle
             }
         }
@@ -145,8 +174,17 @@ class GoogleCastController(
                     .build()
 
             remoteMediaClient.load(request)
+            attachRemoteMediaClient(session)
             Unit
         }
+    }
+
+    override fun play() {
+        (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient?.play()
+    }
+
+    override fun pause() {
+        (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient?.pause()
     }
 
     override fun playOrPause() {
@@ -159,22 +197,101 @@ class GoogleCastController(
     }
 
     override fun seekTo(seconds: Double) {
+        seekToMillis((seconds * MILLIS_PER_SECOND).toLong())
+    }
+
+    override fun seekToMillis(positionMs: Long) {
         val rmc = (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient ?: return
-        rmc.seek((seconds * MILLIS_PER_SECOND).toLong())
+        rmc.seek(positionMs.coerceAtLeast(0L))
+    }
+
+    override fun forward(seconds: Double) {
+        val rmc = (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient ?: return
+        val currentPos = rmc.approximateStreamPosition
+        val duration = rmc.streamDuration
+        val deltaMs = (seconds * MILLIS_PER_SECOND).toLong()
+        val targetPos =
+            if (duration > 0) {
+                (currentPos + deltaMs).coerceAtMost(duration)
+            } else {
+                currentPos + deltaMs
+            }
+        rmc.seek(targetPos)
+    }
+
+    override fun rewind(seconds: Double) {
+        val rmc = (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient ?: return
+        val currentPos = rmc.approximateStreamPosition
+        val deltaMs = (seconds * MILLIS_PER_SECOND).toLong()
+        val targetPos = (currentPos - deltaMs).coerceAtLeast(0L)
+        rmc.seek(targetPos)
     }
 
     override fun stop() {
         (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient?.stop()
+        playbackStateFlow.value = PlaybackState.IDLE
     }
 
     override fun disconnect() {
+        detachRemoteMediaClient(currentSession)
         sessionManager.endCurrentSession(true)
         currentSession = null
         stateFlow.value = DomainCastState.Idle
     }
 
+    private fun attachRemoteMediaClient(session: CastSession?) {
+        val rmc = session?.remoteMediaClient ?: return
+        rmc.registerCallback(mediaCallback)
+        rmc.addProgressListener(progressListener, PROGRESS_INTERVAL_MS)
+        syncPlaybackState()
+    }
+
+    private fun detachRemoteMediaClient(session: CastSession?) {
+        val rmc = session?.remoteMediaClient
+        if (rmc != null) {
+            rmc.unregisterCallback(mediaCallback)
+            rmc.removeProgressListener(progressListener)
+        }
+        playbackStateFlow.value = PlaybackState.IDLE
+    }
+
+    private fun syncPlaybackState(
+        progressOverride: Long? = null,
+        durationOverride: Long? = null,
+    ) {
+        val rmc = (currentSession ?: sessionManager.currentCastSession)?.remoteMediaClient
+        if (rmc == null || rmc.mediaStatus == null) {
+            playbackStateFlow.value = PlaybackState.IDLE
+            return
+        }
+
+        val playerState = rmc.playerState
+        val isPlaying = playerState == MediaStatus.PLAYER_STATE_PLAYING
+        val isBuffering = playerState == MediaStatus.PLAYER_STATE_BUFFERING
+        val isLive = rmc.mediaInfo?.streamType == MediaInfo.STREAM_TYPE_LIVE
+        val positionMs = progressOverride ?: rmc.approximateStreamPosition.coerceAtLeast(0L)
+        val rawDuration = durationOverride ?: rmc.streamDuration
+        val durationMs = if (rawDuration > 0L) rawDuration else 0L
+        val title = rmc.mediaInfo?.metadata?.getString(MediaMetadata.KEY_TITLE)
+
+        playbackStateFlow.value =
+            PlaybackState(
+                isPlaying = isPlaying,
+                isBuffering = isBuffering,
+                isLive = isLive,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                title = title,
+            )
+    }
+
     private fun updateStateFromSession(session: CastSession?) {
         currentSession = session
+        if (session != null && session.isConnected) {
+            attachRemoteMediaClient(session)
+        } else {
+            detachRemoteMediaClient(session)
+        }
         val domainState =
             when {
                 session == null -> DomainCastState.Idle
@@ -191,6 +308,7 @@ class GoogleCastController(
         const val DEFAULT_DEVICE_NAME = "Chromecast"
         const val DEFAULT_TITLE = "AlwaysCast Stream"
         const val MILLIS_PER_SECOND = 1000.0
+        const val PROGRESS_INTERVAL_MS = 1000L
         const val NO_ACTIVE_SESSION_MESSAGE =
             "No hay un Chromecast conectado. Selecciona tu dispositivo con el icono de Cast."
         const val NO_MEDIA_CLIENT_MESSAGE =

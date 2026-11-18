@@ -4,6 +4,7 @@ import dev.matiribco.alwayscast.core.cast.CastController
 import dev.matiribco.alwayscast.core.model.CastState
 import dev.matiribco.alwayscast.core.model.MediaCandidate
 import dev.matiribco.alwayscast.core.model.MediaSourceResolver
+import dev.matiribco.alwayscast.core.model.PlaybackState
 import dev.matiribco.alwayscast.core.model.ResolvedSource
 import dev.matiribco.alwayscast.core.model.UnsupportedReason
 import dev.matiribco.alwayscast.core.model.Verdict
@@ -447,11 +448,99 @@ class CastViewModelTest {
             assertEquals(1, controller.loadCallCount)
         }
 
+    @Test
+    fun playbackControls_delegateToControllerCorrectly() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Supported(MIME_MP4)
+                }
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource =
+                        ResolvedSource(url = RESOLVED_PROXY_URL, contentType = MIME_MP4)
+                }
+            val controller = RecordingCastController()
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = controller,
+                )
+
+            viewModel.onPlayOrPause()
+            assertEquals(1, controller.playOrPauseCallCount)
+
+            viewModel.onSeekTo(45_000L)
+            assertEquals(1, controller.seekToMillisCallCount)
+            assertEquals(45_000L, controller.lastSeekMs)
+
+            viewModel.onForward()
+            assertEquals(1, controller.forwardCallCount)
+
+            viewModel.onRewind()
+            assertEquals(1, controller.rewindCallCount)
+
+            viewModel.onStop()
+            assertEquals(1, controller.stopCallCount)
+        }
+
+    @Test
+    fun playbackStateFlow_updatesStateInViewModel() =
+        runTest(testDispatcher) {
+            val fakeClassifier =
+                object : MediaClassifier {
+                    override fun classify(
+                        url: String,
+                        contentType: String?,
+                    ): Verdict = Verdict.Supported(MIME_MP4)
+                }
+            val fakeResolver =
+                object : MediaSourceResolver {
+                    override suspend fun resolve(candidate: MediaCandidate): ResolvedSource =
+                        ResolvedSource(url = RESOLVED_PROXY_URL, contentType = MIME_MP4)
+                }
+            val controller = RecordingCastController()
+            val viewModel =
+                CastViewModel(
+                    classifier = fakeClassifier,
+                    resolver = fakeResolver,
+                    controller = controller,
+                )
+
+            val updatedPlayback =
+                PlaybackState(
+                    isPlaying = true,
+                    positionMs = 15_000L,
+                    durationMs = 90_000L,
+                    title = "Test Movie",
+                )
+            controller.playbackFlow.value = updatedPlayback
+            advanceUntilIdle()
+
+            val currentState = viewModel.state.value
+            assertEquals(updatedPlayback, currentState.playback)
+            assertEquals(true, currentState.playback.isPlaying)
+            assertEquals(15_000L, currentState.playback.positionMs)
+        }
+
     private class RecordingCastController : CastController {
         override val state: StateFlow<CastState> = MutableStateFlow(CastState.Idle).asStateFlow()
+        val playbackFlow = MutableStateFlow(PlaybackState.IDLE)
+        override val playbackState: StateFlow<PlaybackState> = playbackFlow.asStateFlow()
+
         var lastLoadedUrl: String? = null
         var loadCallCount: Int = 0
         var connectCallCount: Int = 0
+        var playOrPauseCallCount: Int = 0
+        var seekToMillisCallCount: Int = 0
+        var lastSeekMs: Long? = null
+        var forwardCallCount: Int = 0
+        var rewindCallCount: Int = 0
+        var stopCallCount: Int = 0
 
         override suspend fun connect(): Result<String> {
             connectCallCount++
@@ -467,17 +556,40 @@ class CastViewModelTest {
             return Result.success(Unit)
         }
 
-        override fun playOrPause() = Unit
+        override fun play() = Unit
+
+        override fun pause() = Unit
+
+        override fun playOrPause() {
+            playOrPauseCallCount++
+        }
 
         override fun seekTo(seconds: Double) = Unit
 
-        override fun stop() = Unit
+        override fun seekToMillis(positionMs: Long) {
+            seekToMillisCallCount++
+            lastSeekMs = positionMs
+        }
+
+        override fun forward(seconds: Double) {
+            forwardCallCount++
+        }
+
+        override fun rewind(seconds: Double) {
+            rewindCallCount++
+        }
+
+        override fun stop() {
+            stopCallCount++
+        }
 
         override fun disconnect() = Unit
     }
 
     private class FailingConnectCastController : CastController {
         override val state: StateFlow<CastState> = MutableStateFlow(CastState.Idle).asStateFlow()
+        override val playbackState: StateFlow<PlaybackState> =
+            MutableStateFlow(PlaybackState.IDLE).asStateFlow()
         var loadCallCount: Int = 0
 
         override suspend fun connect(): Result<String> = Result.failure(IllegalStateException(CONNECT_FAILURE_MESSAGE))
@@ -490,9 +602,19 @@ class CastViewModelTest {
             return Result.success(Unit)
         }
 
+        override fun play() = Unit
+
+        override fun pause() = Unit
+
         override fun playOrPause() = Unit
 
         override fun seekTo(seconds: Double) = Unit
+
+        override fun seekToMillis(positionMs: Long) = Unit
+
+        override fun forward(seconds: Double) = Unit
+
+        override fun rewind(seconds: Double) = Unit
 
         override fun stop() = Unit
 

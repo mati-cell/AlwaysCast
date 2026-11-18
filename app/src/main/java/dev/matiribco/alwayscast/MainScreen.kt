@@ -3,6 +3,7 @@
 package dev.matiribco.alwayscast
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,11 +18,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.matiribco.alwayscast.core.model.MediaCandidate
 import dev.matiribco.alwayscast.feature.browser.BrowserRoute
 import dev.matiribco.alwayscast.feature.browser.BrowserViewModel
 import dev.matiribco.alwayscast.feature.cast.CastRoute
 import dev.matiribco.alwayscast.feature.cast.CastViewModel
+import dev.matiribco.alwayscast.ui.MiniPlayerBar
 
 @Composable
 fun MainScreen(
@@ -30,6 +33,7 @@ fun MainScreen(
     modifier: Modifier = Modifier,
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.BROWSER) }
+    val castState by castViewModel.state.collectAsStateWithLifecycle()
 
     val onCastCandidate: (MediaCandidate) -> Unit = { candidate ->
         castViewModel.onSelectCandidate(candidate)
@@ -39,46 +43,83 @@ fun MainScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = currentDestination == MainDestination.BROWSER,
-                    onClick = { currentDestination = MainDestination.BROWSER },
-                    label = { Text("Navegador") },
-                    icon = { Text("🌐") },
-                )
-                NavigationBarItem(
-                    selected = currentDestination == MainDestination.CAST,
-                    onClick = { currentDestination = MainDestination.CAST },
-                    label = { Text("Castear") },
-                    icon = { Text("📺") },
-                )
-            }
+            AlwaysCastBottomBar(
+                castState = castState,
+                currentDestination = currentDestination,
+                onPlayOrPause = castViewModel::onPlayOrPause,
+                onSelectDestination = { currentDestination = it },
+            )
         },
     ) { innerPadding ->
+        MainContentHost(
+            currentDestination = currentDestination,
+            browserViewModel = browserViewModel,
+            castViewModel = castViewModel,
+            onCastCandidate = onCastCandidate,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
+}
+
+@Composable
+private fun AlwaysCastBottomBar(
+    castState: dev.matiribco.alwayscast.feature.cast.CastUiState,
+    currentDestination: MainDestination,
+    onPlayOrPause: () -> Unit,
+    onSelectDestination: (MainDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        if (castState.playback.hasActiveMedia && currentDestination != MainDestination.CAST) {
+            MiniPlayerBar(
+                playback = castState.playback,
+                onPlayOrPause = onPlayOrPause,
+                onClick = { onSelectDestination(MainDestination.CAST) },
+            )
+        }
+        NavigationBar {
+            NavigationBarItem(
+                selected = currentDestination == MainDestination.BROWSER,
+                onClick = { onSelectDestination(MainDestination.BROWSER) },
+                label = { Text("Navegador") },
+                icon = { Text("🌐") },
+            )
+            NavigationBarItem(
+                selected = currentDestination == MainDestination.CAST,
+                onClick = { onSelectDestination(MainDestination.CAST) },
+                label = { Text("Castear") },
+                icon = { Text("📺") },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainContentHost(
+    currentDestination: MainDestination,
+    browserViewModel: BrowserViewModel,
+    castViewModel: CastViewModel,
+    onCastCandidate: (MediaCandidate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        val isBrowser = currentDestination == MainDestination.BROWSER
         Box(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                if (isBrowser) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier.size(0.dp)
+                },
         ) {
-            val isBrowser = currentDestination == MainDestination.BROWSER
-            Box(
-                modifier =
-                    if (isBrowser) {
-                        Modifier.fillMaxSize()
-                    } else {
-                        Modifier.size(0.dp)
-                    },
-            ) {
-                BrowserRoute(
-                    viewModel = browserViewModel,
-                    onCastCandidate = onCastCandidate,
-                )
-            }
+            BrowserRoute(
+                viewModel = browserViewModel,
+                onCastCandidate = onCastCandidate,
+            )
+        }
 
-            if (currentDestination == MainDestination.CAST) {
-                CastRoute(viewModel = castViewModel)
-            }
+        if (currentDestination == MainDestination.CAST) {
+            CastRoute(viewModel = castViewModel)
         }
     }
 }
