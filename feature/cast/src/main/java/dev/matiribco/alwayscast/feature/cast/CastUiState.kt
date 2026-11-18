@@ -1,8 +1,11 @@
 package dev.matiribco.alwayscast.feature.cast
 
+import dev.matiribco.alwayscast.core.model.MediaCandidate
+
 enum class Phase {
     IDLE,
     PROBING,
+    SELECTING_CANDIDATE,
     READY,
     CASTING,
     UNSUPPORTED,
@@ -14,11 +17,24 @@ data class CastUiState(
     val phase: Phase = Phase.IDLE,
     val deviceName: String? = null,
     val message: String? = null,
+    val candidates: List<MediaCandidate> = emptyList(),
 ) {
     companion object {
         fun idle(): CastUiState = CastUiState()
 
         fun probing(url: String): CastUiState = CastUiState(url = url, phase = Phase.PROBING)
+
+        fun selectingCandidate(
+            url: String,
+            candidates: List<MediaCandidate>,
+            deviceName: String? = null,
+        ): CastUiState =
+            CastUiState(
+                url = url,
+                phase = Phase.SELECTING_CANDIDATE,
+                candidates = candidates,
+                deviceName = deviceName,
+            )
 
         fun ready(
             url: String,

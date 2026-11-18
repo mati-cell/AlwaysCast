@@ -5,6 +5,7 @@ data class MediaCandidate(
     val headers: Map<String, String> = emptyMap(),
     val contentType: String? = null,
     val source: CandidateSource = CandidateSource.PASTED,
+    val label: String? = null,
 )
 
 enum class CandidateSource {
