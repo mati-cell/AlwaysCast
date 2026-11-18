@@ -138,4 +138,52 @@ class BrowserViewModelTest {
         assertTrue(viewModel.uiState.value.canGoBack)
         assertFalse(viewModel.uiState.value.canGoForward)
     }
+
+    @Test
+    fun normalizeUrl_conEsquema_retornaMismaUrl() {
+        assertEquals("https://ok.ru/video/123", viewModel.normalizeUrl("https://ok.ru/video/123"))
+        assertEquals("http://example.com/test", viewModel.normalizeUrl("http://example.com/test"))
+    }
+
+    @Test
+    fun normalizeUrl_sinEsquemaConDominio_agregaHttps() {
+        assertEquals("https://ok.ru", viewModel.normalizeUrl("ok.ru"))
+        assertEquals("https://www.google.com", viewModel.normalizeUrl("www.google.com"))
+    }
+
+    @Test
+    fun normalizeUrl_conTextoDeBusqueda_retornaBusquedaEnGoogle() {
+        assertEquals(
+            "https://www.google.com/search?q=pelicula+accion",
+            viewModel.normalizeUrl("pelicula accion"),
+        )
+        assertEquals(
+            "https://www.google.com/search?q=matrix",
+            viewModel.normalizeUrl("matrix"),
+        )
+    }
+
+    @Test
+    fun normalizeUrl_conTextoVacio_retornaVacio() {
+        assertEquals("", viewModel.normalizeUrl("   "))
+    }
+
+    @Test
+    fun onGoHome_restableceEstadoAValoresIniciales() {
+        // Arrange
+        viewModel.onNavigate("https://example.com")
+        viewModel.onCandidateDetected(MediaCandidate(url = "https://example.com/video.mp4"))
+        viewModel.onToggleCandidateSheet()
+
+        // Act
+        viewModel.onGoHome()
+
+        // Assert
+        val state = viewModel.uiState.value
+        assertEquals("", state.currentUrl)
+        assertEquals("", state.pageTitle)
+        assertFalse(state.canGoBack)
+        assertFalse(state.isCandidateSheetVisible)
+        assertTrue(state.candidates.isEmpty())
+    }
 }

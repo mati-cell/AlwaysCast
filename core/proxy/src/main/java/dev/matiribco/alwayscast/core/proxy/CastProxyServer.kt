@@ -19,8 +19,18 @@ class CastProxyServer(
     client: OkHttpClient,
     spool: SpoolStore,
     private val token: String = randomToken(),
-    private val host: String = LOOPBACK,
+    private val hostProvider: () -> String = { LOOPBACK },
 ) : Closeable {
+    constructor(
+        client: OkHttpClient,
+        spool: SpoolStore,
+        token: String = randomToken(),
+        host: String,
+    ) : this(client, spool, token, { host })
+
+    val host: String
+        get() = hostProvider()
+
     private val forwarder = UpstreamForwarder(client, spool, ::proxyUrlFor)
     private var engine: EmbeddedServer<*, *>? = null
     private var port: Int = 0

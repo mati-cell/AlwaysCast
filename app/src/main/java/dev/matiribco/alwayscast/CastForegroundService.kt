@@ -77,13 +77,12 @@ class CastForegroundService : Service() {
                 val spoolDir = cacheDir.resolve(SPOOL_DIR_NAME).apply { mkdirs() }
                 val spool = FileSpoolStore(spoolDir)
                 val client = OkHttpClient()
-                val host = LanAddressResolver.findLanIp()
 
                 val server =
                     CastProxyServer(
                         client = client,
                         spool = spool,
-                        host = host,
+                        hostProvider = LanAddressResolver::findLanIp,
                     )
                 server.start()
                 proxyServer = server
