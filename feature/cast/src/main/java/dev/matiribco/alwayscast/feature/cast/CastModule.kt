@@ -7,6 +7,7 @@ import dev.matiribco.alwayscast.core.model.MediaSourceResolver
 import dev.matiribco.alwayscast.core.network.MediaClassifier
 import dev.matiribco.alwayscast.core.network.MediaInspector
 import dev.matiribco.alwayscast.core.network.MediaTypeClassifier
+import dev.matiribco.alwayscast.core.network.WebMediaExtractor
 
 object CastModule {
     fun provideViewModelFactory(
@@ -14,6 +15,7 @@ object CastModule {
         controller: CastController,
         classifier: MediaClassifier = MediaTypeClassifier,
         inspector: MediaInspector? = null,
+        extractor: WebMediaExtractor? = null,
     ): ViewModelProvider.Factory =
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -26,6 +28,7 @@ object CastModule {
                     resolver = resolver,
                     controller = controller,
                     inspector = inspector,
+                    extractor = extractor,
                 ) as T
             }
         }

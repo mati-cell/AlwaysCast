@@ -9,6 +9,7 @@ import dev.matiribco.alwayscast.core.model.UnsupportedReason
 import dev.matiribco.alwayscast.core.model.Verdict
 import dev.matiribco.alwayscast.core.network.MediaClassifier
 import dev.matiribco.alwayscast.core.network.MediaInspector
+import dev.matiribco.alwayscast.core.network.WebMediaExtractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ class CastViewModel(
     private val resolver: MediaSourceResolver,
     private val controller: CastController,
     private val inspector: MediaInspector? = null,
+    private val extractor: WebMediaExtractor? = null,
 ) : ViewModel() {
     private val _state = MutableStateFlow(CastUiState.idle())
     val state: StateFlow<CastUiState> = _state.asStateFlow()
@@ -42,37 +44,29 @@ class CastViewModel(
                 verdict = inspector.inspect(candidate)
             }
 
-            when (verdict) {
-                is Verdict.Unsupported -> {
-                    val message = formatUnsupportedMessage(verdict.reason)
-                    _state.value = CastUiState.unsupported(currentUrl, message)
-                }
-                is Verdict.Unknown -> {
-                    _state.value = CastUiState.unsupported(currentUrl, UNKNOWN_MEDIA_MESSAGE)
-                }
-                is Verdict.Supported -> {
-                    val connectResult = controller.connect()
-                    if (connectResult.isFailure) {
-                        val message = connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE
-                        _state.value = CastUiState.error(message)
-                        return@launch
-                    }
-
-                    val deviceName = connectResult.getOrNull() ?: DEFAULT_DEVICE_NAME
-                    _state.value = CastUiState.ready(currentUrl, deviceName)
-
-                    val resolved = resolver.resolve(candidate)
-                    val loadResult = controller.load(resolved, null)
-
-                    if (loadResult.isFailure) {
-                        val reason = loadResult.exceptionOrNull()?.message ?: LOAD_ERROR_DEFAULT
-                        _state.value = CastUiState.error("$LOAD_ERROR_PREFIX: $reason")
-                        return@launch
-                    }
-
-                    _state.value = CastUiState.casting(resolved.url, deviceName)
+            if (shouldAttemptExtraction(verdict) && extractor != null) {
+                val extracted = extractor.extract(currentUrl)
+                if (extracted.size > 1) {
+                    _state.value =
+                        CastUiState.selectingCandidate(
+                            url = currentUrl,
+                            candidates = extracted,
+                            deviceName = _state.value.deviceName,
+                        )
+                    return@launch
+                } else if (extracted.size == 1) {
+                    castCandidate(extracted.first())
+                    return@launch
                 }
             }
+
+            handleVerdict(verdict, candidate)
+        }
+    }
+
+    fun onSelectCandidate(candidate: MediaCandidate) {
+        viewModelScope.launch {
+            castCandidate(candidate)
         }
     }
 
@@ -88,22 +82,69 @@ class CastViewModel(
             }
 
             val deviceName = connectResult.getOrNull() ?: DEFAULT_DEVICE_NAME
-            if (currentUrl.isNotBlank()) {
+            if (_state.value.phase == Phase.SELECTING_CANDIDATE) {
+                _state.value = _state.value.copy(deviceName = deviceName)
+            } else if (currentUrl.isNotBlank()) {
                 val candidate = MediaCandidate(url = currentUrl)
-                val resolved = resolver.resolve(candidate)
-                val loadResult = controller.load(resolved, null)
-
-                if (loadResult.isFailure) {
-                    val reason = loadResult.exceptionOrNull()?.message ?: LOAD_ERROR_DEFAULT
-                    _state.value = CastUiState.error("$LOAD_ERROR_PREFIX: $reason")
-                } else {
-                    _state.value = CastUiState.casting(resolved.url, deviceName)
-                }
+                castCandidate(candidate, deviceName)
             } else {
                 _state.value = CastUiState.ready(currentUrl, deviceName)
             }
         }
     }
+
+    private suspend fun handleVerdict(
+        verdict: Verdict,
+        candidate: MediaCandidate,
+    ) {
+        when (verdict) {
+            is Verdict.Unsupported -> {
+                val message = formatUnsupportedMessage(verdict.reason)
+                _state.value = CastUiState.unsupported(currentUrl, message)
+            }
+            is Verdict.Unknown -> {
+                _state.value = CastUiState.unsupported(currentUrl, UNKNOWN_MEDIA_MESSAGE)
+            }
+            is Verdict.Supported -> {
+                castCandidate(candidate)
+            }
+        }
+    }
+
+    private suspend fun castCandidate(
+        candidate: MediaCandidate,
+        connectedDeviceName: String? = null,
+    ) {
+        val deviceName =
+            connectedDeviceName ?: run {
+                val connectResult = controller.connect()
+                if (connectResult.isFailure) {
+                    val message = connectResult.exceptionOrNull()?.message ?: NO_DEVICE_FOUND_MESSAGE
+                    _state.value = CastUiState.error(message)
+                    return
+                }
+                connectResult.getOrNull() ?: DEFAULT_DEVICE_NAME
+            }
+
+        _state.value = CastUiState.ready(candidate.url, deviceName)
+        val resolved = resolver.resolve(candidate)
+        val loadResult = controller.load(resolved, candidate.label)
+
+        if (loadResult.isFailure) {
+            val reason = loadResult.exceptionOrNull()?.message ?: LOAD_ERROR_DEFAULT
+            _state.value = CastUiState.error("$LOAD_ERROR_PREFIX: $reason")
+            return
+        }
+
+        _state.value = CastUiState.casting(resolved.url, deviceName)
+    }
+
+    private fun shouldAttemptExtraction(verdict: Verdict): Boolean =
+        when (verdict) {
+            is Verdict.Unsupported -> verdict.reason == UnsupportedReason.NO_MEDIA
+            is Verdict.Unknown -> true
+            is Verdict.Supported -> false
+        }
 
     private fun formatUnsupportedMessage(reason: UnsupportedReason): String =
         when (reason) {
