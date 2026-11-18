@@ -4,8 +4,8 @@ import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import dev.matiribco.alwayscast.core.cast.GoogleCastController
 import dev.matiribco.alwayscast.core.designsystem.AlwaysCastTheme
@@ -19,7 +19,7 @@ import dev.matiribco.alwayscast.feature.cast.CastViewModel
 import dev.matiribco.alwayscast.feature.cast.LocalProxyResolver
 import okhttp3.OkHttpClient
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

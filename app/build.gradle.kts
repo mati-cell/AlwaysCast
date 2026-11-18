@@ -30,6 +30,7 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.play.services.cast.framework)
+    implementation(libs.androidx.appcompat)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel)

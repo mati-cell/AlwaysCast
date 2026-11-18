@@ -12,12 +12,14 @@ coroutines-test = "1.10.2"
 cast-framework = "21.5.0"
 lifecycle = "2.8.7"
 activity-compose = "1.9.3"
+appcompat = "1.7.0"
 compose-bom = "2024.10.01"
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }

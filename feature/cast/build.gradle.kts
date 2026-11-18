@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":core:cast"))
     implementation(project(":core:designsystem"))
     implementation(libs.play.services.cast.framework)
+    implementation(libs.androidx.appcompat)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.lifecycle.runtime.compose)
