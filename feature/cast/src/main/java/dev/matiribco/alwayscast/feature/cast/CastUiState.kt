@@ -1,5 +1,7 @@
 package dev.matiribco.alwayscast.feature.cast
 
+import dev.matiribco.alwayscast.core.model.MediaCandidate
+
 enum class Phase {
     IDLE,
     PROBING,

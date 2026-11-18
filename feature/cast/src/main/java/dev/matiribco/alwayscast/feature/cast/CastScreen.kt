@@ -34,6 +34,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
+import dev.matiribco.alwayscast.core.model.MediaCandidate
 
 @Composable
 fun CastRoute(
@@ -43,9 +44,13 @@ fun CastRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CastScreen(
         state = state,
-        onUrlChange = viewModel::onUrlChange,
-        onCastClick = viewModel::onCastClick,
-        onConnectClick = viewModel::onConnectClick,
+        actions =
+            CastActions(
+                onUrlChange = viewModel::onUrlChange,
+                onCastClick = viewModel::onCastClick,
+                onConnectClick = viewModel::onConnectClick,
+                onSelectCandidate = viewModel::onSelectCandidate,
+            ),
         modifier = modifier,
     )
 }
@@ -53,9 +58,7 @@ fun CastRoute(
 @Composable
 fun CastScreen(
     state: CastUiState,
-    onUrlChange: (String) -> Unit,
-    onCastClick: () -> Unit,
-    onConnectClick: () -> Unit,
+    actions: CastActions,
     modifier: Modifier = Modifier,
 ) {
     var textInput by remember { mutableStateOf(state.url) }
@@ -78,7 +81,7 @@ fun CastScreen(
                 value = textInput,
                 onValueChange = {
                     textInput = it
-                    onUrlChange(it)
+                    actions.onUrlChange(it)
                 },
                 label = { Text("URL del video web") },
                 placeholder = { Text("https://servidor.com/video.mp4") },
@@ -88,17 +91,77 @@ fun CastScreen(
 
             CastActionButtons(
                 isCastEnabled = textInput.isNotBlank() && state.phase != Phase.PROBING,
-                onCastClick = onCastClick,
-                onConnectClick = onConnectClick,
+                onCastClick = actions.onCastClick,
+                onConnectClick = actions.onConnectClick,
             )
 
             PhaseIndicator(state = state)
+
+            if (state.candidates.isNotEmpty()) {
+                CandidateSelectionCard(
+                    candidates = state.candidates,
+                    onSelectCandidate = actions.onSelectCandidate,
+                )
+            }
 
             if (!state.message.isNullOrBlank()) {
                 MessageCard(
                     message = state.message,
                     isError = state.phase == Phase.ERROR || state.phase == Phase.UNSUPPORTED,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CandidateSelectionCard(
+    candidates: List<MediaCandidate>,
+    onSelectCandidate: (MediaCandidate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Calidades y formatos encontrados:",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            candidates.forEach { candidate ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = candidate.label ?: "Stream de Video",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = candidate.contentType.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
+                    Button(
+                        onClick = { onSelectCandidate(candidate) },
+                        modifier = Modifier.padding(start = 8.dp),
+                    ) {
+                        Text("Castear")
+                    }
+                }
             }
         }
     }
@@ -221,6 +284,15 @@ private fun PhaseIndicator(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
+        }
+        Phase.SELECTING_CANDIDATE -> {
+            Text(
+                text = "Fuentes detectadas. Selecciona una opción abajo:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                modifier = modifier,
+            )
         }
         Phase.READY -> {
             Text(
