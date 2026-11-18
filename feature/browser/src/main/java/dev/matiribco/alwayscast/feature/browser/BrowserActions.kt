@@ -8,6 +8,7 @@ data class BrowserActions(
     val onSelectCandidate: (MediaCandidate) -> Unit,
     val onToggleCandidateSheet: () -> Unit,
     val onDismissCandidateSheet: () -> Unit,
+    val onGoHome: () -> Unit = {},
     val onPageStarted: (String) -> Unit = {},
     val onPageFinished: (String, String?) -> Unit = { _, _ -> },
     val onHistoryChanged: (Boolean, Boolean) -> Unit = { _, _ -> },

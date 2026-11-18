@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -25,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.matiribco.alwayscast.core.model.MediaCandidate
@@ -44,6 +47,7 @@ fun BrowserRoute(
                 onSelectCandidate = onCastCandidate,
                 onToggleCandidateSheet = viewModel::onToggleCandidateSheet,
                 onDismissCandidateSheet = viewModel::onDismissCandidateSheet,
+                onGoHome = viewModel::onGoHome,
                 onPageStarted = viewModel::onPageStarted,
                 onPageFinished = viewModel::onPageFinished,
                 onHistoryChanged = viewModel::onHistoryChanged,
@@ -63,11 +67,14 @@ fun BrowserScreen(
     actions: BrowserActions,
     modifier: Modifier = Modifier,
 ) {
-    var urlInput by remember(state.currentUrl) { mutableStateOf(state.currentUrl) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
 
-    BackHandler(enabled = state.canGoBack) {
-        webViewInstance?.goBack()
+    BackHandler(enabled = state.canGoBack || state.currentUrl.isNotBlank()) {
+        if (state.canGoBack) {
+            webViewInstance?.goBack()
+        } else {
+            actions.onGoHome()
+        }
     }
 
     Scaffold(
@@ -81,37 +88,69 @@ fun BrowserScreen(
             }
         },
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        ) {
-            BrowserSearchBar(
-                url = urlInput,
-                canGoBack = state.canGoBack,
-                onUrlChange = { urlInput = it },
-                onNavigate = { actions.onNavigate(urlInput) },
-                onGoBack = { webViewInstance?.goBack() },
-            )
-
-            if (state.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            BrowserWebViewContainer(
-                currentUrl = state.currentUrl,
-                actions = actions,
-                onWebViewCreated = { webViewInstance = it },
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            )
-        }
+        BrowserContent(
+            state = state,
+            actions = actions,
+            onWebViewCreated = { webViewInstance = it },
+            onGoBack = { webViewInstance?.goBack() },
+            modifier = Modifier.padding(innerPadding),
+        )
 
         if (state.isCandidateSheetVisible) {
             CandidateBottomSheet(
                 candidates = state.candidates,
                 onSelectCandidate = actions.onSelectCandidate,
                 onDismiss = actions.onDismissCandidateSheet,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BrowserContent(
+    state: BrowserUiState,
+    actions: BrowserActions,
+    onWebViewCreated: (WebView) -> Unit,
+    onGoBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var urlInput by remember(state.currentUrl) { mutableStateOf(state.currentUrl) }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        val searchBarState =
+            SearchBarState(
+                url = urlInput,
+                canGoBack = state.canGoBack,
+                isBrowsing = state.currentUrl.isNotBlank(),
+            )
+        val searchBarActions =
+            SearchBarActions(
+                onUrlChange = { urlInput = it },
+                onNavigate = { actions.onNavigate(urlInput) },
+                onGoBack = onGoBack,
+                onGoHome = actions.onGoHome,
+            )
+
+        BrowserSearchBar(
+            state = searchBarState,
+            actions = searchBarActions,
+        )
+
+        if (state.isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (state.currentUrl.isBlank()) {
+            BrowserHomeScreen(
+                onNavigate = actions.onNavigate,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
+        } else {
+            BrowserWebViewContainer(
+                currentUrl = state.currentUrl,
+                actions = actions,
+                onWebViewCreated = onWebViewCreated,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
             )
         }
     }
@@ -164,13 +203,23 @@ private fun BrowserFab(
     }
 }
 
+private data class SearchBarState(
+    val url: String,
+    val canGoBack: Boolean,
+    val isBrowsing: Boolean,
+)
+
+private data class SearchBarActions(
+    val onUrlChange: (String) -> Unit,
+    val onNavigate: () -> Unit,
+    val onGoBack: () -> Unit,
+    val onGoHome: () -> Unit,
+)
+
 @Composable
 private fun BrowserSearchBar(
-    url: String,
-    canGoBack: Boolean,
-    onUrlChange: (String) -> Unit,
-    onNavigate: () -> Unit,
-    onGoBack: () -> Unit,
+    state: SearchBarState,
+    actions: SearchBarActions,
 ) {
     Row(
         modifier =
@@ -179,27 +228,38 @@ private fun BrowserSearchBar(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (canGoBack) {
+        if (state.canGoBack) {
             OutlinedButton(
-                onClick = onGoBack,
-                modifier = Modifier.padding(end = 8.dp),
+                onClick = actions.onGoBack,
+                modifier = Modifier.padding(end = 6.dp),
             ) {
                 Text("◀")
             }
         }
 
+        if (state.isBrowsing) {
+            OutlinedButton(
+                onClick = actions.onGoHome,
+                modifier = Modifier.padding(end = 6.dp),
+            ) {
+                Text("🏠")
+            }
+        }
+
         OutlinedTextField(
-            value = url,
-            onValueChange = onUrlChange,
+            value = state.url,
+            onValueChange = actions.onUrlChange,
             placeholder = { Text("https:// o búsqueda...") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { actions.onNavigate() }),
             modifier =
                 Modifier
                     .weight(1f)
-                    .padding(end = 8.dp),
+                    .padding(end = 6.dp),
         )
 
-        Button(onClick = onNavigate) {
+        Button(onClick = actions.onNavigate) {
             Text("Ir")
         }
     }

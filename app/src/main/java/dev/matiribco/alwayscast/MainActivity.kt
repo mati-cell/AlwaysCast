@@ -33,14 +33,12 @@ class MainActivity : AppCompatActivity() {
         val httpClient = OkHttpClient()
         val spoolDir = cacheDir.resolve(SPOOL_DIR_NAME).apply { mkdirs() }
         val spool = FileSpoolStore(spoolDir)
-        val lanIp = LanAddressResolver.findLanIp()
-
         val proxyServer =
             CastForegroundService.activeProxy
                 ?: CastProxyServer(
                     client = httpClient,
                     spool = spool,
-                    host = lanIp,
+                    hostProvider = LanAddressResolver::findLanIp,
                 )
 
         val resolver =

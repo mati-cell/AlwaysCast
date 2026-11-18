@@ -6,13 +6,28 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.net.URLEncoder
 
 class BrowserViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(BrowserUiState())
     val uiState: StateFlow<BrowserUiState> = _uiState.asStateFlow()
 
     fun onNavigate(url: String) {
-        _uiState.update { it.copy(currentUrl = url) }
+        val normalized = normalizeUrl(url)
+        _uiState.update { it.copy(currentUrl = normalized) }
+    }
+
+    fun onGoHome() {
+        _uiState.update {
+            it.copy(
+                currentUrl = "",
+                pageTitle = "",
+                canGoBack = false,
+                canGoForward = false,
+                candidates = emptyList(),
+                isCandidateSheetVisible = false,
+            )
+        }
     }
 
     fun onPageStarted(url: String) {
@@ -70,5 +85,19 @@ class BrowserViewModel : ViewModel() {
 
     fun onClearCandidates() {
         _uiState.update { it.copy(candidates = emptyList()) }
+    }
+
+    internal fun normalizeUrl(input: String): String {
+        val trimmed = input.trim()
+        if (trimmed.isBlank()) return ""
+        val lower = trimmed.lowercase()
+        return when {
+            lower.startsWith("http://") || lower.startsWith("https://") -> trimmed
+            trimmed.contains(" ") || !trimmed.contains(".") -> {
+                val encoded = URLEncoder.encode(trimmed, "UTF-8")
+                "https://www.google.com/search?q=$encoded"
+            }
+            else -> "https://$trimmed"
+        }
     }
 }
